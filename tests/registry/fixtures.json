@@ -2,7 +2,7 @@
   "fixtures": [
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/alloca.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -44,7 +44,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/arch-os-specific/varargs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -65,7 +65,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/arch-specific/asm.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -107,7 +107,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/arch-specific/spin.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -128,7 +128,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/arch-specific/vm_x86.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -149,7 +149,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -170,7 +170,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/atomics.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -191,7 +191,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/auto_type.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -212,7 +212,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/bitfields.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -233,7 +233,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/bool.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -254,7 +254,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/compound_literals.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -275,7 +275,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/empty_init.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -296,7 +296,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/exprs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -317,7 +317,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/factorial.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -338,7 +338,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/fn_attrs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -359,7 +359,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/frame_address.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -380,7 +380,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/generics.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -401,7 +401,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/gotos.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -422,7 +422,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/if_else.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -443,7 +443,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/incomplete_arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -464,7 +464,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/insertion.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -485,7 +485,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/keywords.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -506,7 +506,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/lift_const.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -527,7 +527,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/loops.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -548,7 +548,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/macrocase.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -569,7 +569,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/macros.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -590,7 +590,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/main_fn.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -611,7 +611,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/call_only_once.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -632,7 +632,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/f128.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -653,7 +653,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/irreducible.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -674,7 +674,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/macros.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -695,7 +695,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/out_of_range_lit.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -716,7 +716,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/rnd.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -737,7 +737,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/rotate.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -758,7 +758,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/sigign.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -779,7 +779,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/switch.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -800,7 +800,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/typedefidx.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -821,7 +821,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/types.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -842,7 +842,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/os-specific/wide_strings.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -863,7 +863,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/predefined.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -884,7 +884,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/records.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -905,7 +905,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/ref_ub.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -926,7 +926,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/return_addr_helpers.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -947,7 +947,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/return_address.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -968,7 +968,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/rotate.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -989,7 +989,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/scalar_init.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -1010,7 +1010,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/static_assert.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -1031,7 +1031,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/str_init.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -1052,7 +1052,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/types_compatible.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -1073,7 +1073,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "c2dascript-transpile/tests/snapshots/volatile.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -1917,6 +1917,7 @@
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c01-complex",
       "checked_in_das": "tests/syntax/c01_complex.das",
       "clang": {
         "compile_commands": null,
@@ -1924,20 +1925,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c01_complex",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c01_complex.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c01-const-int",
       "checked_in_das": "tests/syntax/c01_const_int.das",
       "clang": {
         "compile_commands": null,
@@ -1945,20 +1949,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c01_const_int",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c01_const_int.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c02-const-ptr",
       "checked_in_das": "tests/syntax/c02_const_ptr.das",
       "clang": {
         "compile_commands": null,
@@ -1966,20 +1973,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c02_const_ptr",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c02_const_ptr.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c03-ptr-to-const",
       "checked_in_das": "tests/syntax/c03_ptr_to_const.das",
       "clang": {
         "compile_commands": null,
@@ -1987,20 +1997,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c03_ptr_to_const",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c03_ptr_to_const.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c04-const-array",
       "checked_in_das": "tests/syntax/c04_const_array.das",
       "clang": {
         "compile_commands": null,
@@ -2008,20 +2021,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c04_const_array",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c04_const_array.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c05-const-struct-ptr",
       "checked_in_das": "tests/syntax/c05_const_struct_ptr.das",
       "clang": {
         "compile_commands": null,
@@ -2029,20 +2045,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c05_const_struct_ptr",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c05_const_struct_ptr.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c06-const-chain",
       "checked_in_das": "tests/syntax/c06_const_chain.das",
       "clang": {
         "compile_commands": null,
@@ -2050,20 +2069,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c06_const_chain",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c06_const_chain.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c07-const-assign",
       "checked_in_das": "tests/syntax/c07_const_assign.das",
       "clang": {
         "compile_commands": null,
@@ -2071,20 +2093,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c07_const_assign",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c07_const_assign.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c08-const-static",
       "checked_in_das": "tests/syntax/c08_const_static.das",
       "clang": {
         "compile_commands": null,
@@ -2092,20 +2117,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c08_const_static",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c08_const_static.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c09-const-multi",
       "checked_in_das": "tests/syntax/c09_const_multi.das",
       "clang": {
         "compile_commands": null,
@@ -2113,20 +2141,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c09_const_multi",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c09_const_multi.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-c10-const-mixed",
       "checked_in_das": "tests/syntax/c10_const_mixed.das",
       "clang": {
         "compile_commands": null,
@@ -2134,20 +2165,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-const",
       "id": "tests--syntax--c10_const_mixed",
       "owner": "type/value lowering",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/c10_const_mixed.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d01-basic",
       "checked_in_das": "tests/syntax/d01_basic.das",
       "clang": {
         "compile_commands": null,
@@ -2155,62 +2189,71 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d01_basic",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d01_basic.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d01-dowhile",
+      "checked_in_das": "tests/syntax/d01_dowhile.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d01_dowhile",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d01_dowhile.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d02-dowhile-break",
+      "checked_in_das": "tests/syntax/d02_dowhile_break.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d02_dowhile_break",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d02_dowhile_break.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d02-once",
       "checked_in_das": "tests/syntax/d02_once.das",
       "clang": {
         "compile_commands": null,
@@ -2218,41 +2261,47 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d02_once",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d02_once.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d03-dowhile-continue",
+      "checked_in_das": "tests/syntax/d03_dowhile_continue.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d03_dowhile_continue",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d03_dowhile_continue.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d03-zero",
       "checked_in_das": "tests/syntax/d03_zero.das",
       "clang": {
         "compile_commands": null,
@@ -2260,20 +2309,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d03_zero",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d03_zero.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d04-break",
       "checked_in_das": "tests/syntax/d04_break.das",
       "clang": {
         "compile_commands": null,
@@ -2281,41 +2333,47 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d04_break",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d04_break.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d04-dowhile-once",
+      "checked_in_das": "tests/syntax/d04_dowhile_once.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d04_dowhile_once",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d04_dowhile_once.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d05-continue",
       "checked_in_das": "tests/syntax/d05_continue.das",
       "clang": {
         "compile_commands": null,
@@ -2323,62 +2381,71 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d05_continue",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d05_continue.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d05-dowhile-zero",
+      "checked_in_das": "tests/syntax/d05_dowhile_zero.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d05_dowhile_zero",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d05_dowhile_zero.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d06-dowhile-nest",
+      "checked_in_das": "tests/syntax/d06_dowhile_nest.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d06_dowhile_nest",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d06_dowhile_nest.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d06-nested-do",
       "checked_in_das": "tests/syntax/d06_nested_do.das",
       "clang": {
         "compile_commands": null,
@@ -2386,20 +2453,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d06_nested_do",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d06_nested_do.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d07-do-while-var",
       "checked_in_das": "tests/syntax/d07_do_while_var.das",
       "clang": {
         "compile_commands": null,
@@ -2407,41 +2477,47 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d07_do_while_var",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d07_do_while_var.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d07-ptr-arith",
+      "checked_in_das": "tests/syntax/d07_ptr_arith.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d07_ptr_arith",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d07_ptr_arith.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d08-do-in-while",
       "checked_in_das": "tests/syntax/d08_do_in_while.das",
       "clang": {
         "compile_commands": null,
@@ -2449,41 +2525,47 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d08_do_in_while",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d08_do_in_while.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-d08-ptr-arrow",
+      "checked_in_das": "tests/syntax/d08_ptr_arrow.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d08_ptr_arrow",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d08_ptr_arrow.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d09-continue-in-while",
       "checked_in_das": "tests/syntax/d09_continue_in_while.das",
       "clang": {
         "compile_commands": null,
@@ -2491,20 +2573,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d09_continue_in_while",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d09_continue_in_while.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-d10-sum-do",
       "checked_in_das": "tests/syntax/d10_sum_do.das",
       "clang": {
         "compile_commands": null,
@@ -2512,20 +2597,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-do-while",
       "id": "tests--syntax--d10_sum_do",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/d10_sum_do.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-g01-goto-basic",
       "checked_in_das": "tests/syntax/g01_goto_basic.das",
       "clang": {
         "compile_commands": null,
@@ -2533,20 +2621,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-goto",
       "id": "tests--syntax--g01_goto_basic",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/g01_goto_basic.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-g02-goto-loop",
       "checked_in_das": "tests/syntax/g02_goto_loop.das",
       "clang": {
         "compile_commands": null,
@@ -2554,20 +2645,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-goto",
       "id": "tests--syntax--g02_goto_loop",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/g02_goto_loop.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-g03-goto-forward",
       "checked_in_das": "tests/syntax/g03_goto_forward.das",
       "clang": {
         "compile_commands": null,
@@ -2575,17 +2669,19 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-goto",
       "id": "tests--syntax--g03_goto_forward",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/g03_goto_forward.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
@@ -2694,27 +2790,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/syntax/p01_ptr_deref.das",
-      "clang": {
-        "compile_commands": null,
-        "flags": [
-          "-w"
-        ]
-      },
-      "entrypoint": "unregistered",
-      "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
-      },
-      "family": "syntax-pointer-legacy",
-      "id": "tests--syntax--p01_ptr_deref",
-      "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
-      "source": "tests/syntax/p01_ptr_deref.c",
-      "status": "quarantined"
-    },
-    {
-      "c_graph": "single-tu",
+      "canonical_case": "n06-unknown-extern-call",
       "checked_in_das": null,
       "clang": {
         "compile_commands": null,
@@ -2722,20 +2798,128 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "not-applicable",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "translation-error",
+        "value": {
+          "cause": "unsupported external call: absolute_value",
+          "location": "n06_unknown_extern_call.c",
+          "operation": "top-level declaration lowering",
+          "type": "Function"
+        }
+      },
+      "family": "syntax-negative",
+      "id": "tests--syntax--n06_unknown_extern_call",
+      "owner": "diagnostic boundary",
+      "runtime": "not-applicable",
+      "source": "tests/syntax/n06_unknown_extern_call.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "n07-unknown-builtin",
+      "checked_in_das": null,
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "not-applicable",
+      "expected": {
+        "kind": "translation-error",
+        "value": {
+          "cause": "unsupported builtin __builtin_alloca",
+          "location": "n07_unknown_builtin.c",
+          "operation": "top-level declaration lowering",
+          "type": "Function"
+        }
+      },
+      "family": "syntax-negative",
+      "id": "tests--syntax--n07_unknown_builtin",
+      "owner": "diagnostic boundary",
+      "runtime": "not-applicable",
+      "source": "tests/syntax/n07_unknown_builtin.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "n08-unsupported-field-type",
+      "checked_in_das": null,
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "not-applicable",
+      "expected": {
+        "kind": "translation-error",
+        "value": {
+          "cause": "unsupported vector field type",
+          "location": "n08_unsupported_field_type.c",
+          "operation": "type declaration lowering",
+          "type": "Struct"
+        }
+      },
+      "family": "syntax-negative",
+      "id": "tests--syntax--n08_unsupported_field_type",
+      "owner": "diagnostic boundary",
+      "runtime": "not-applicable",
+      "source": "tests/syntax/n08_unsupported_field_type.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "legacy-p01-ptr-deref",
+      "checked_in_das": "tests/syntax/p01_ptr_deref.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "main_0",
+      "expected": {
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p01_ptr_deref",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p01_ptr_deref.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "legacy-p01-ptr-int",
+      "checked_in_das": "tests/syntax/p01_ptr_int.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "main_0",
+      "expected": {
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p01_ptr_int",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p01_ptr_int.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p02-ptr-assign",
       "checked_in_das": "tests/syntax/p02_ptr_assign.das",
       "clang": {
         "compile_commands": null,
@@ -2743,20 +2927,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p02_ptr_assign",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p02_ptr_assign.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p03-ptr-add",
       "checked_in_das": "tests/syntax/p03_ptr_add.das",
       "clang": {
         "compile_commands": null,
@@ -2764,20 +2951,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p03_ptr_add",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p03_ptr_add.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p04-arrow-basic",
       "checked_in_das": "tests/syntax/p04_arrow_basic.das",
       "clang": {
         "compile_commands": null,
@@ -2785,20 +2975,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p04_arrow_basic",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p04_arrow_basic.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p05-arrow-chain",
       "checked_in_das": "tests/syntax/p05_arrow_chain.das",
       "clang": {
         "compile_commands": null,
@@ -2806,20 +2999,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p05_arrow_chain",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p05_arrow_chain.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p06-ptr-to-ptr",
       "checked_in_das": "tests/syntax/p06_ptr_to_ptr.das",
       "clang": {
         "compile_commands": null,
@@ -2827,20 +3023,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p06_ptr_to_ptr",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p06_ptr_to_ptr.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p07-ptr-arith",
       "checked_in_das": "tests/syntax/p07_ptr_arith.das",
       "clang": {
         "compile_commands": null,
@@ -2848,20 +3047,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p07_ptr_arith",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p07_ptr_arith.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p08-arrow-func",
       "checked_in_das": "tests/syntax/p08_arrow_func.das",
       "clang": {
         "compile_commands": null,
@@ -2869,20 +3071,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p08_arrow_func",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p08_arrow_func.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p09-ptr-null",
       "checked_in_das": "tests/syntax/p09_ptr_null.das",
       "clang": {
         "compile_commands": null,
@@ -2890,20 +3095,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p09_ptr_null",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p09_ptr_null.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-p10-ptr-swap",
       "checked_in_das": "tests/syntax/p10_ptr_swap.das",
       "clang": {
         "compile_commands": null,
@@ -2911,17 +3119,19 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-pointer-legacy",
       "id": "tests--syntax--p10_ptr_swap",
       "owner": "abi.rs / object_memory.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/p10_ptr_swap.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
@@ -3277,7 +3487,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p26-variadic-sum",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p26_variadic_sum.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3302,7 +3512,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p27-variadic-promotions",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p27_variadic_promotions.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3327,7 +3537,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p28-variadic-multiple-types",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p28_variadic_multiple_types.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3379,7 +3589,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p30-macro-constant-expression",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p30_macro_constant_expression.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3404,7 +3614,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p31-macro-side-effect",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p31_macro_side_effect.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3429,7 +3639,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p32-macro-statement-expression",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p32_macro_statement_expression.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3454,7 +3664,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p33-offsetof-sizeof",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p33_predefined_sizeof_builtin.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3479,7 +3689,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p34-clang-layout-records",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p34_c_layout_records.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3504,7 +3714,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p35-pointer-backed-struct",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p35_pointer_backed_struct.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3529,7 +3739,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p37-union-overlay",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p37_union_overlay.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3554,7 +3764,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p38-local-union-init",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p38_local_union_init.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3579,7 +3789,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p39-packed-scalar",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p39_packed_scalar.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3604,7 +3814,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p40-bitfield-rmw",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p40_bitfield_rmw.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3629,7 +3839,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p40-nested-raw-aggregate-place",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p40_nested_raw_aggregate_place.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3654,7 +3864,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p41-raw-array-field-decay",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p41_raw_array_field_decay.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3679,7 +3889,7 @@
     {
       "c_graph": "single-tu",
       "canonical_case": "p41-union-cast",
-      "checked_in_das": null,
+      "checked_in_das": "tests/syntax/p41_union_cast.das",
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -3703,6 +3913,257 @@
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "p42-loops",
+      "checked_in_das": "tests/syntax/p42_loops.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "loops_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p42_loops",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p42_loops.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p43-switch",
+      "checked_in_das": "tests/syntax/p43_switch.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "switch_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p43_switch",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p43_switch.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p44-goto",
+      "checked_in_das": "tests/syntax/p44_goto.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "goto_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p44_goto",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p44_goto.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p45-static-local",
+      "checked_in_das": "tests/syntax/p45_static_local.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "static_local_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p45_static_local",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p45_static_local.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p46-function-pointers",
+      "checked_in_das": "tests/syntax/p46_function_pointers.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "function_pointer_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p46_function_pointers",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p46_function_pointers.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p47-side-effects",
+      "checked_in_das": "tests/syntax/p47_side_effects.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "side_effects_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p47_side_effects",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p47_side_effects.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p48-integer-semantics",
+      "checked_in_das": "tests/syntax/p48_integer_semantics.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "integer_semantics_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p48_integer_semantics",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p48_integer_semantics.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p49-floating",
+      "checked_in_das": "tests/syntax/p49_floating.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "floating_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p49_floating",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p49_floating.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p50-printer",
+      "checked_in_das": "tests/syntax/p50_printer.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "printer_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p50_printer",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p50_printer.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "p51-arrays",
+      "checked_in_das": "tests/syntax/p51_arrays.das",
+      "clang": {
+        "compile_commands": null,
+        "flags": [
+          "-w"
+        ]
+      },
+      "entrypoint": "arrays_runtime",
+      "expected": {
+        "kind": "stdout-and-exit-code",
+        "value": {
+          "exit_code": 0,
+          "stdout": ""
+        }
+      },
+      "family": "syntax-pointer-legacy",
+      "id": "tests--syntax--p51_arrays",
+      "owner": "abi.rs / object_memory.rs",
+      "runtime": "required",
+      "source": "tests/syntax/p51_arrays.c",
+      "status": "supported"
+    },
+    {
+      "c_graph": "single-tu",
+      "canonical_case": "legacy-s01-switch-basic",
       "checked_in_das": "tests/syntax/s01_switch_basic.das",
       "clang": {
         "compile_commands": null,
@@ -3710,20 +4171,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-switch",
       "id": "tests--syntax--s01_switch_basic",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/s01_switch_basic.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-s02-switch-default",
       "checked_in_das": "tests/syntax/s02_switch_default.das",
       "clang": {
         "compile_commands": null,
@@ -3731,20 +4195,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-switch",
       "id": "tests--syntax--s02_switch_default",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/s02_switch_default.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-s03-switch-fallthrough",
       "checked_in_das": "tests/syntax/s03_switch_fallthrough.das",
       "clang": {
         "compile_commands": null,
@@ -3752,17 +4219,19 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-switch",
       "id": "tests--syntax--s03_switch_fallthrough",
       "owner": "CFG reconstruction",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/s03_switch_fallthrough.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
@@ -3808,6 +4277,7 @@
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t01-arith",
       "checked_in_das": "tests/syntax/t01_arith.das",
       "clang": {
         "compile_commands": null,
@@ -3815,20 +4285,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t01_arith",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t01_arith.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t01-typedef-simple",
       "checked_in_das": "tests/syntax/t01_typedef_simple.das",
       "clang": {
         "compile_commands": null,
@@ -3836,20 +4309,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t01_typedef_simple",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t01_typedef_simple.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t02-mul-div",
       "checked_in_das": "tests/syntax/t02_mul_div.das",
       "clang": {
         "compile_commands": null,
@@ -3857,20 +4333,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t02_mul_div",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t02_mul_div.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t02-typedef-ptr",
       "checked_in_das": "tests/syntax/t02_typedef_ptr.das",
       "clang": {
         "compile_commands": null,
@@ -3878,20 +4357,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t02_typedef_ptr",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t02_typedef_ptr.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t03-cmp",
       "checked_in_das": "tests/syntax/t03_cmp.das",
       "clang": {
         "compile_commands": null,
@@ -3899,20 +4381,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t03_cmp",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t03_cmp.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t03-typedef-struct",
       "checked_in_das": "tests/syntax/t03_typedef_struct.das",
       "clang": {
         "compile_commands": null,
@@ -3920,20 +4405,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t03_typedef_struct",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t03_typedef_struct.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t04-logical",
       "checked_in_das": "tests/syntax/t04_logical.das",
       "clang": {
         "compile_commands": null,
@@ -3941,20 +4429,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t04_logical",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t04_logical.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t05-if-elif",
       "checked_in_das": "tests/syntax/t05_if_elif.das",
       "clang": {
         "compile_commands": null,
@@ -3962,20 +4453,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t05_if_elif",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t05_if_elif.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t06-while",
       "checked_in_das": "tests/syntax/t06_while.das",
       "clang": {
         "compile_commands": null,
@@ -3983,20 +4477,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t06_while",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t06_while.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t07-for",
       "checked_in_das": "tests/syntax/t07_for.das",
       "clang": {
         "compile_commands": null,
@@ -4004,20 +4501,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t07_for",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t07_for.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t08-struct",
       "checked_in_das": "tests/syntax/t08_struct.das",
       "clang": {
         "compile_commands": null,
@@ -4025,20 +4525,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t08_struct",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t08_struct.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t09-enum",
       "checked_in_das": "tests/syntax/t09_enum.das",
       "clang": {
         "compile_commands": null,
@@ -4046,20 +4549,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t09_enum",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t09_enum.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t10-chain",
       "checked_in_das": "tests/syntax/t10_chain.das",
       "clang": {
         "compile_commands": null,
@@ -4067,20 +4573,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t10_chain",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t10_chain.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-t11-bool-precedence",
       "checked_in_das": "tests/syntax/t11_bool_precedence.das",
       "clang": {
         "compile_commands": null,
@@ -4088,20 +4597,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-numeric",
       "id": "tests--syntax--t11_bool_precedence",
       "owner": "operators.rs / value_lowering.rs",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/t11_bool_precedence.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-test-full",
       "checked_in_das": "tests/syntax/test_full.das",
       "clang": {
         "compile_commands": null,
@@ -4109,17 +4621,19 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-smoke",
       "id": "tests--syntax--test_full",
       "owner": "legacy smoke coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/test_full.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
@@ -4144,6 +4658,7 @@
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-test-member",
       "checked_in_das": "tests/syntax/test_member.das",
       "clang": {
         "compile_commands": null,
@@ -4151,20 +4666,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-smoke",
       "id": "tests--syntax--test_member",
       "owner": "legacy smoke coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/test_member.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-test-simple",
       "checked_in_das": "tests/syntax/test_simple.das",
       "clang": {
         "compile_commands": null,
@@ -4172,17 +4690,19 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-smoke",
       "id": "tests--syntax--test_simple",
       "owner": "legacy smoke coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/test_simple.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
@@ -4207,27 +4727,31 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-test-struct-full",
+      "checked_in_das": "tests/syntax/test_struct_full.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-smoke",
       "id": "tests--syntax--test_struct_full",
       "owner": "legacy smoke coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/test_struct_full.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-u01-unsafe-ptr",
       "checked_in_das": "tests/syntax/u01_unsafe_ptr.das",
       "clang": {
         "compile_commands": null,
@@ -4235,20 +4759,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-unsafe-legacy",
       "id": "tests--syntax--u01_unsafe_ptr",
       "owner": "legacy pointer coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/u01_unsafe_ptr.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-u02-unsafe-write",
       "checked_in_das": "tests/syntax/u02_unsafe_write.das",
       "clang": {
         "compile_commands": null,
@@ -4256,20 +4783,23 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-unsafe-legacy",
       "id": "tests--syntax--u02_unsafe_write",
       "owner": "legacy pointer coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/u02_unsafe_write.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
+      "canonical_case": "legacy-u03-unsafe-swap",
       "checked_in_das": "tests/syntax/u03_unsafe_swap.das",
       "clang": {
         "compile_commands": null,
@@ -4277,42 +4807,47 @@
           "-w"
         ]
       },
-      "entrypoint": "unregistered",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "unregistered",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-unsafe-legacy",
       "id": "tests--syntax--u03_unsafe_swap",
       "owner": "legacy pointer coverage",
-      "runtime": "unverified",
+      "runtime": "required",
       "source": "tests/syntax/u03_unsafe_swap.c",
-      "status": "quarantined"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": null,
+      "canonical_case": "legacy-ztest-inc",
+      "checked_in_das": "tests/syntax/ztest_inc.das",
       "clang": {
         "compile_commands": null,
         "flags": [
           "-w"
         ]
       },
-      "entrypoint": "not-applicable",
+      "entrypoint": "main_0",
       "expected": {
-        "kind": "include-fragment",
-        "value": "unregistered"
+        "kind": "c-reference-oracle",
+        "value": {
+          "oracle": "c-reference"
+        }
       },
       "family": "syntax-include-fragment",
       "id": "tests--syntax--ztest_inc",
       "owner": "fixture graph inventory",
-      "runtime": "not-applicable",
+      "runtime": "required",
       "source": "tests/syntax/ztest_inc.c",
-      "status": "historical"
+      "status": "supported"
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/arrays/src/arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4333,7 +4868,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/arrays/src/incomplete_arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4354,7 +4889,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/arrays/src/packed_arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4375,7 +4910,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/arrays/src/variable_arrays.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4396,7 +4931,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/asm.aarch64/src/asm.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4417,7 +4952,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/asm.arm/src/asm.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4438,7 +4973,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/asm.x86_64/src/asm.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4459,7 +4994,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/builtins/src/alloca.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4480,7 +5015,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/builtins/src/atomics.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4501,7 +5036,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/builtins/src/math.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4522,7 +5057,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/builtins/src/mem_x_fns.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4543,7 +5078,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/casts/src/cast_funptr.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4564,7 +5099,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/casts/src/casts.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4606,7 +5141,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/comments/src/comments.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4627,7 +5162,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/conditionals/src/binary_conditional.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4648,7 +5183,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/conditionals/src/conditional.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4669,7 +5204,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/conditionals/src/conditionals.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4690,7 +5225,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/conditionals/src/else_if_chain.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4711,7 +5246,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/conditionals/src/unused_conditionals.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4732,7 +5267,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/big_enum.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4753,7 +5288,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/enum_as_int.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4774,7 +5309,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/enum_compound.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4795,7 +5330,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/enum_duplicate.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4816,7 +5351,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/enum_fwd_decl.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4837,7 +5372,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/enum_ret.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4858,7 +5393,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/non_canonical_enum_def.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4879,7 +5414,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/enums/src/top_enum.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4900,7 +5435,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/example/src/add.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4921,7 +5456,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/example/src/skip_me.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4942,7 +5477,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/example/src/sub.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4963,7 +5498,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/floats/src/no_float_wrapping_neg.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -4984,7 +5519,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/dfa_binary_multiple_three.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5005,7 +5540,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/duffs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5026,7 +5561,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/early_returns.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5047,7 +5582,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/fallthrough.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5068,7 +5603,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/goto_error.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5089,7 +5624,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/idiomatic_nested_loops.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5110,7 +5645,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/idiomatic_switch.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5131,7 +5666,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/irreducible.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5152,7 +5687,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/jump_into_loop.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5173,7 +5708,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/label_break_trigger.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5194,7 +5729,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/lifted_decls.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5215,7 +5750,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/gotos/src/stmt_expr.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5236,7 +5771,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/arithmetic.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5257,7 +5792,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/chars.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5278,7 +5813,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/compound_assignment.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5299,7 +5834,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/const_test.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5320,7 +5855,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/implicit_int.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5341,7 +5876,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/sieve_of_eratosthenes.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5362,7 +5897,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/size_t.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5383,7 +5918,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/ints/src/volatile.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5404,7 +5939,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/fn_attrs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5425,7 +5960,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/functions.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5446,7 +5981,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/linking.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5467,7 +6002,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/nofnargs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5488,7 +6023,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/noop.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5509,7 +6044,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/items/src/varargs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5530,7 +6065,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/longdouble/src/long_double.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5551,7 +6086,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/break_continue.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5572,7 +6107,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/goto_linear_cf.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5593,7 +6128,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/goto_loop_cf.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5614,7 +6149,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/goto_switch_cf.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5635,7 +6170,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/nested_goto.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5656,7 +6191,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/loops/src/switch.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5677,7 +6212,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/macros/src/define.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5698,7 +6233,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/call_only_once.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5719,7 +6254,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/exprs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5740,7 +6275,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/lvalues.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5761,7 +6296,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/malloc.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5782,7 +6317,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/qsort.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5803,7 +6338,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/shadowing.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5824,7 +6359,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/sizeofs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5845,7 +6380,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/strings_h.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5866,7 +6401,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/typedef.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5887,7 +6422,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/uninitialized.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5908,7 +6443,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/unsized.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5929,7 +6464,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/misc/src/vectortypes.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5950,7 +6485,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/modules/src/modules.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5971,7 +6506,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/pointers/src/function_pointers.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -5992,7 +6527,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/pointers/src/pointer_arith.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6013,7 +6548,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/pointers/src/pointer_init.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6034,7 +6569,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/pointers/src/ref_decay.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6055,7 +6590,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/simd.x86_64/src/x86.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6076,7 +6611,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/statics/src/attributes.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6097,7 +6632,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/statics/src/sections.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6118,7 +6653,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/statics/src/storage.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6139,7 +6674,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/statics/src/thread_locals.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6160,7 +6695,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/anonymous_decls.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6181,7 +6716,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/bitfields.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6202,7 +6737,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/flex_array_members.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6223,7 +6758,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/forward.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6244,7 +6779,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/self_referential.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6265,7 +6800,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/struct_with_exp.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6286,7 +6821,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/structs.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6307,7 +6842,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/structs/src/variable_offsetof.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [
@@ -6328,7 +6863,7 @@
     },
     {
       "c_graph": "single-tu",
-      "checked_in_das": "tests/unit/unions/src/unions.das",
+      "checked_in_das": null,
       "clang": {
         "compile_commands": null,
         "flags": [

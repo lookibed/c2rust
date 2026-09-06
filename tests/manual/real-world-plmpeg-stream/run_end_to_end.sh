@@ -5,7 +5,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../../.." && pwd)"
 fixture="$root/tests/manual/real-world-plmpeg-stream"
-daslang="${DASROOT:-/root/daScript}/bin/daslang"
+daslang="$(bash "$(dirname "${BASH_SOURCE[0]}")/../../../scripts/find_daslang.sh")"
 expected="$fixture/plmpeg_reference.expected"
 work="$(mktemp -d "${TMPDIR:-/tmp}/c2das-plmpeg.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
@@ -39,7 +39,7 @@ cmp -- "$expected" "$work/reference.actual" || {
     exit 1
 }
 
-LLVM_CONFIG_PATH=/usr/bin/llvm-config-18 cargo run -q -p c2dascript-transpile -- \
+cargo run -q -p c2dascript-transpile -- \
     --file "$src/all.c" -DPLM_NO_STDIO \
     -I"$f/include" -I"$f/upstream" -I"$f/fixtures" -I"$src"
 

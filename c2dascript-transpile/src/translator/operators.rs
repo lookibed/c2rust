@@ -15,20 +15,21 @@ impl<'c> Translation<'c> {
     ) -> TranslationResult<WithStmts<DaExpr>> {
         use CBinOp::*;
 
-        // Comma: value of LHS is discarded
+        // Comma: the value of the LHS is discarded, its side effects are not.
         if matches!(op, Comma) {
-            let _lhs = self.convert_expr(ctx.unused(), lhs, None)?;
-            return self.convert_expr(ctx, rhs, Some(expr_type_id));
+            let lhs_val = self.convert_expr(ctx.unused(), lhs, None)?;
+            let is_unsafe = lhs_val.is_unsafe;
+            let mut stmts = lhs_val.stmts;
+            stmts.extend(self.discard_value_stmt(lhs_val.val));
+            return Ok(self
+                .convert_expr(ctx, rhs, Some(expr_type_id))?
+                .prepend_stmts(stmts)
+                .merge_unsafe(is_unsafe));
         }
 
         // Logical ops: &&, ||
         if op.is_logical() {
-            let lhs_val = self.convert_condition(ctx, true, lhs)?;
-            let rhs_val = self.convert_condition(ctx, true, rhs)?;
-            let das_op = convert_binop(op).map_err(TranslationError::generic)?;
-            return Ok(lhs_val
-                .zip(rhs_val)
-                .map(|(l, r)| mk().binary_op(das_op, l, r)));
+            return self.convert_short_circuit(ctx, op, lhs, rhs);
         }
 
         // Assignment ops: =, +=, -=, etc.
@@ -47,18 +48,32 @@ impl<'c> Translation<'c> {
         // Regular binary ops
         let is_ptr = self.is_pointer_type(expr_type_id.ctype);
 
-        // daScript требует matching типов для всех операторов.
-        // Если int + uint → cast<int>(uint) или cast<uint>(int)
+        // The operand's own Clang type is authoritative: Clang has already
+        // inserted the integer promotions C requires, so re-deriving the type
+        // from the underlying declaration would undo them.
         let lhs_expr_type_id = self.ast_context[lhs].kind.get_qual_type();
         let rhs_expr_type_id = self.ast_context[rhs].kind.get_qual_type();
-        let lhs_type_id = lhs_expr_type_id
-            .or_else(|| self.expr_operand_type(lhs))
-            .or(opt_lhs_type_id);
-        let rhs_type_id = rhs_expr_type_id
-            .or_else(|| self.expr_operand_type(rhs))
-            .or(opt_rhs_type_id);
+        let lhs_type_id = lhs_expr_type_id.or(opt_lhs_type_id);
+        let rhs_type_id = rhs_expr_type_id.or(opt_rhs_type_id);
         let lhs_kind = lhs_type_id.map(|q| self.ast_context.resolve_type(q.ctype).kind.clone());
         let rhs_kind = rhs_type_id.map(|q| self.ast_context.resolve_type(q.ctype).kind.clone());
+
+        // Canonical numeric path: both operands are C arithmetic values, so
+        // the C usual arithmetic conversions in abi.rs decide the one type the
+        // daScript operator runs in.
+        let lhs_is_ptr_c = lhs_kind.as_ref().map_or(false, |k| k.is_pointer());
+        let rhs_is_ptr_c = rhs_kind.as_ref().map_or(false, |k| k.is_pointer());
+        if !is_ptr && !lhs_is_ptr_c && !rhs_is_ptr_c {
+            if let (Some(lk), Some(rk)) = (lhs_kind.as_ref(), rhs_kind.as_ref()) {
+                if let (Some(la), Some(ra)) =
+                    (self.arith_type_of_kind(lk), self.arith_type_of_kind(rk))
+                {
+                    return self.convert_arithmetic_binop(
+                        ctx, op, lhs, rhs, lhs_type_id, rhs_type_id, lk, rk, la, ra,
+                    );
+                }
+            }
+        }
         let lhs_is_uint = lhs_kind
             .as_ref()
             .map_or(false, |k| k.is_unsigned_integral_type());
@@ -73,8 +88,12 @@ impl<'c> Translation<'c> {
             .map_or(false, |k| k.is_signed_integral_type());
         let needs_coerce = (lhs_is_uint && rhs_is_int) || (rhs_is_uint && lhs_is_int);
 
-        let lhs_val = self.convert_expr(ctx, lhs, lhs_type_id)?;
-        let rhs_val = self.convert_expr(ctx, rhs, rhs_type_id)?;
+        // An operand's value is always used, whatever happens to the value of
+        // the operator itself: `(a = b) + 1` needs the assignment hoisted into
+        // a statement so the operand is the assigned variable, because
+        // daScript assignment is a statement and has no value.
+        let lhs_val = self.convert_expr(ctx.used(), lhs, lhs_type_id)?;
+        let rhs_val = self.convert_expr(ctx.used(), rhs, rhs_type_id)?;
         let lhs_da_from_c = lhs_type_id
             .map(|q| self.convert_type(q).map(writable_type))
             .transpose()?;
@@ -83,20 +102,6 @@ impl<'c> Translation<'c> {
             .transpose()?;
         let lhs_val = materialize_expr_type(lhs_val, lhs_da_from_c.as_ref());
         let rhs_val = materialize_expr_type(rhs_val, rhs_da_from_c.as_ref());
-        // Storage bytes are not numeric daScript operands.  The canonical ABI
-        // promotes them to uint before arithmetic and comparison operators.
-        let lhs_val = self.lower_to_c_value(
-            lhs_val,
-            self.storage_byte_source_type(lhs).or(lhs_type_id),
-            DaType::uint(),
-            ValueSite::BinaryOperand,
-        )?;
-        let rhs_val = self.lower_to_c_value(
-            rhs_val,
-            self.storage_byte_source_type(rhs).or(rhs_type_id),
-            DaType::uint(),
-            ValueSite::BinaryOperand,
-        )?;
 
         // Infer daScript types from the actual converted expressions (more accurate than C AST types,
         // because C type promotion can hide type mismatches that daScript rejects).
@@ -164,6 +169,14 @@ impl<'c> Translation<'c> {
             lhs_da.is_some() && rhs_da.is_some() && lhs_da != rhs_da && !is_ptr && !any_ptr;
 
         match op {
+            // daScript compares two `T?` values directly.  Only a mixed
+            // pointer/integer comparison needs the raw-address ABI.
+            EqualEqual | NotEqual if lhs_is_ptr && rhs_is_ptr => {
+                let das_op = convert_binop(op).map_err(TranslationError::generic)?;
+                Ok(lhs_val
+                    .zip(rhs_val)
+                    .map(|(l, r)| DaExpr::Unsafe(Box::new(mk().binary_op(das_op, l, r)))))
+            }
             EqualEqual | NotEqual if any_ptr => {
                 let das_op = convert_binop(op).map_err(TranslationError::generic)?;
                 Ok(lhs_val.zip(rhs_val).map(|(l, r)| {
@@ -185,6 +198,12 @@ impl<'c> Translation<'c> {
                 }))
             }
             Add => {
+                // C `n + p` is `p + n`; daScript only defines `T? + integer`.
+                let (lhs_val, rhs_val, lhs_is_ptr) = if rhs_is_ptr && !lhs_is_ptr {
+                    (rhs_val, lhs_val, true)
+                } else {
+                    (lhs_val, rhs_val, lhs_is_ptr)
+                };
                 let result = self.convert_addition(lhs_val, rhs_val, expr_type_id, lhs_is_ptr)?;
                 if type_diff && !matches!(result.val, DaExpr::Unsafe(_)) {
                     let target = lhs_da.clone().unwrap();
@@ -307,6 +326,124 @@ impl<'c> Translation<'c> {
         }
     }
 
+    /// C `&&` / `||` evaluate the right operand only if the left one did not
+    /// already decide the result.  daScript's own `&&`/`||` short-circuit, so
+    /// a pure right operand needs nothing; a right operand that had to hoist
+    /// statements is lowered into an `if` guarded by the left operand.
+    fn convert_short_circuit(
+        &self,
+        ctx: ExprContext,
+        op: CBinOp,
+        lhs: CExprId,
+        rhs: CExprId,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
+        let das_op = convert_binop(op).map_err(TranslationError::generic)?;
+        let lhs_val = self.convert_condition(ctx, true, lhs)?;
+        let rhs_val = self.convert_condition(ctx, true, rhs)?;
+        if rhs_val.is_pure() {
+            return Ok(lhs_val
+                .zip(rhs_val)
+                .map(|(l, r)| mk().binary_op(das_op, l, r)));
+        }
+        // C gives `&&` and `||` type `int` with value 0 or 1.  The temporary
+        // carries that type, so no consumer has to rediscover it.
+        //   a && b  ->  var t : int = 0; if (a) { <b's stmts>; if (b) t = 1 }
+        //   a || b  ->  var t : int = 1; if (!a) { <b's stmts>; if (!b) t = 0 }
+        let is_and = matches!(op, CBinOp::And);
+        let tmp = self.renamer.borrow_mut().fresh();
+        let tmp_var = DaExpr::Var(tmp.clone());
+        let is_unsafe = lhs_val.is_unsafe || rhs_val.is_unsafe;
+        let (seed, settled) = if is_and { (0, 1) } else { (1, 0) };
+        let mut stmts = lhs_val.stmts;
+        stmts.push(DaStmt::Var {
+            name: tmp,
+            var_type: DaType::int(),
+            init: Some(DaExpr::ConstInt(seed)),
+        });
+        let mut guarded = rhs_val.stmts;
+        let rhs_cond = if is_and {
+            rhs_val.val
+        } else {
+            mk().unary_op("!", rhs_val.val)
+        };
+        guarded.push(DaStmt::Expr(DaExpr::IfThenElse {
+            cond: Box::new(rhs_cond),
+            then: Box::new(DaExpr::Block(DaBlock {
+                stmts: vec![DaStmt::Expr(DaExpr::Assign(
+                    Box::new(tmp_var.clone()),
+                    Box::new(DaExpr::ConstInt(settled)),
+                ))],
+            })),
+            elifs: vec![],
+            else_: None,
+        }));
+        let lhs_cond = if is_and {
+            lhs_val.val
+        } else {
+            mk().unary_op("!", lhs_val.val)
+        };
+        stmts.push(DaStmt::Expr(DaExpr::IfThenElse {
+            cond: Box::new(lhs_cond),
+            then: Box::new(DaExpr::Block(DaBlock { stmts: guarded })),
+            elifs: vec![],
+            else_: None,
+        }));
+        Ok(WithStmts::new(stmts, tmp_var).merge_unsafe(is_unsafe))
+    }
+
+    /// The one arithmetic lowering: both operands are raised to the common
+    /// type the C usual arithmetic conversions select, and the daScript
+    /// operator runs entirely in that type.
+    #[allow(clippy::too_many_arguments)]
+    fn convert_arithmetic_binop(
+        &self,
+        ctx: ExprContext,
+        op: CBinOp,
+        lhs: CExprId,
+        rhs: CExprId,
+        lhs_type_id: Option<CQualTypeId>,
+        rhs_type_id: Option<CQualTypeId>,
+        lhs_kind: &CTypeKind,
+        rhs_kind: &CTypeKind,
+        lhs_arith: abi::CArith,
+        rhs_arith: abi::CArith,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
+        let das_op = convert_binop(op).map_err(TranslationError::generic)?;
+        // An operand's value is always consumed by the operator, even when
+        // the operator's own result is discarded: `(a = b) + 1` must lower
+        // the assignment as a statement whose value is then read.
+        let lhs_val = self.convert_expr(ctx.used(), lhs, lhs_type_id)?;
+        let rhs_val = self.convert_expr(ctx.used(), rhs, rhs_type_id)?;
+        // A shift keeps the promoted type of its left operand; only the
+        // operands' daScript spelling has to agree.
+        let (lhs_target, rhs_target) = if matches!(op, CBinOp::ShiftLeft | CBinOp::ShiftRight) {
+            (lhs_arith, lhs_arith)
+        } else {
+            let common = abi::usual_arithmetic_type(lhs_arith, rhs_arith);
+            (common, common)
+        };
+        let lhs_val = self.lower_to_c_value(
+            lhs_val,
+            lhs_type_id,
+            lhs_target.da_type(),
+            ValueSite::BinaryOperand,
+        )?;
+        let rhs_val = self.lower_to_c_value(
+            rhs_val,
+            rhs_type_id,
+            rhs_target.da_type(),
+            ValueSite::BinaryOperand,
+        )?;
+        let lhs_val =
+            self.bool_to_integer(lhs_val.map(|v| self.promote_operand(v, lhs_kind, lhs_target)));
+        let rhs_val =
+            self.bool_to_integer(rhs_val.map(|v| self.promote_operand(v, rhs_kind, rhs_target)));
+        Ok(lhs_val
+            .zip(rhs_val)
+            .map(|(l, r)| mk().binary_op(das_op, l, r)))
+    }
+
+    #[allow(dead_code)]
     fn expr_operand_type(&self, expr_id: CExprId) -> Option<CQualTypeId> {
         match &self.ast_context[expr_id].kind {
             CExprKind::Member(_, _, field_id, _, _) => match &self.ast_context[*field_id].kind {
@@ -321,6 +458,7 @@ impl<'c> Translation<'c> {
         }
     }
 
+    #[allow(dead_code)]
     fn storage_byte_source_type(&self, expr_id: CExprId) -> Option<CQualTypeId> {
         let source = match &self.ast_context[expr_id].kind {
             CExprKind::ImplicitCast(_, inner, _, _, _) => self.storage_byte_source_type(*inner),
@@ -346,8 +484,13 @@ impl<'c> Translation<'c> {
         _compute_res_type_id: Option<CQualTypeId>,
     ) -> TranslationResult<WithStmts<DaExpr>> {
         let is_used = ctx.used;
-        let lhs_type_id = compute_lhs_type_id
-            .or_else(|| self.ast_context[lhs].kind.get_qual_type())
+        // The storage type of the assignment target.  Clang's "computation
+        // LHS type" is the *promoted* type the arithmetic runs in, which is a
+        // different thing and is consulted separately below.
+        let lhs_type_id = self.ast_context[lhs]
+            .kind
+            .get_qual_type()
+            .or(compute_lhs_type_id)
             .unwrap_or(expr_type_id);
         let lhs_kind = self
             .ast_context
@@ -419,35 +562,76 @@ impl<'c> Translation<'c> {
                 self.raw_store(address, value)
             };
         }
-        let lhs_val = self.convert_expr(ctx, lhs, Some(lhs_type_id))?;
+        let lhs_val = self.convert_lvalue_once(ctx, lhs, lhs_type_id)?;
 
         if op != CBinOp::Assign {
-            // Compound: a += b → a = a + b
+            // C says `a op= b` is `a = (typeof a)(a op b)` with the usual
+            // arithmetic conversions applied to the operation, and that `a` is
+            // evaluated exactly once.
             let inner_op = op
                 .underlying_assignment()
                 .ok_or_else(|| TranslationError::generic("not a compound assignment"))?;
             let das_op = convert_binop(inner_op).map_err(TranslationError::generic)?;
             let is_ptr_op = lhs_kind.is_pointer() || self.is_pointer_type(lhs_type_id.ctype);
+            let rhs_ty = self.ast_context[rhs].kind.get_qual_type();
+            let rhs_val = self.convert_expr(ctx.used(), rhs, if is_ptr_op { None } else { rhs_ty })?;
+            if is_ptr_op {
+                let value = rhs_val.map(|offset| {
+                    DaExpr::Unsafe(Box::new(mk().binary_op(
+                        das_op,
+                        lhs_val.val.clone(),
+                        self.pointer_offset_operand(offset),
+                    )))
+                });
+                let place = lhs_val.val.clone();
+                let stmts = lhs_val.stmts;
+                let is_unsafe = lhs_val.is_unsafe || value.is_unsafe;
+                let value_stmts = value.stmts;
+                let assign = DaExpr::Assign(Box::new(place.clone()), Box::new(value.val));
+                return Ok(lower_assignment_expr(assign, place, is_used)
+                    .prepend_stmts(value_stmts)
+                    .prepend_stmts(stmts)
+                    .merge_unsafe(is_unsafe));
+            }
+            let lhs_arith = self.arith_type_of_kind(&lhs_kind).ok_or_else(|| {
+                TranslationError::generic("compound assignment to non-arithmetic C type")
+            })?;
+            let rhs_kind = rhs_ty
+                .map(|q| self.ast_context.resolve_type(q.ctype).kind.clone())
+                .ok_or_else(|| {
+                    TranslationError::generic("compound assignment right operand has no C type")
+                })?;
+            let rhs_arith = self.arith_type_of_kind(&rhs_kind).ok_or_else(|| {
+                TranslationError::generic("compound assignment from non-arithmetic C type")
+            })?;
+            // Clang already computed the type C performs the operation in;
+            // fall back to the conversion table when it is absent.  A shift
+            // keeps the promoted type of the left operand.
+            let common = match compute_lhs_type_id.and_then(|q| self.arith_type_of(q)) {
+                Some(computed) => computed,
+                None if matches!(inner_op, CBinOp::ShiftLeft | CBinOp::ShiftRight) => lhs_arith,
+                None => abi::usual_arithmetic_type(lhs_arith, rhs_arith),
+            };
             let rhs_val =
-                self.convert_expr(ctx, rhs, if is_ptr_op { None } else { Some(lhs_type_id) })?;
-            return Ok(lhs_val.zip(rhs_val).and_then(|(l, r)| {
-                let binop = mk().binary_op(das_op, l.clone(), r);
-                let assigned_value = if is_ptr_op {
-                    self.coerce_assignment_value(
-                        DaExpr::Unsafe(Box::new(binop)),
-                        &lhs_kind,
-                        &lhs_da_type,
-                    )
-                } else {
-                    self.coerce_assignment_value(binop, &lhs_kind, &lhs_da_type)
-                };
-                let assign = DaExpr::Assign(Box::new(l.clone()), Box::new(assigned_value));
-                lower_assignment_expr(assign, l, is_used)
-            }));
+                self.bool_to_integer(rhs_val.map(|v| self.promote_operand(v, &rhs_kind, common)));
+            let place = lhs_val.val.clone();
+            let promoted_place = self.promote_operand(place.clone(), &lhs_kind, common);
+            let stmts = lhs_val.stmts;
+            let is_unsafe = lhs_val.is_unsafe || rhs_val.is_unsafe;
+            let rhs_stmts = rhs_val.stmts;
+            let value = self.narrow_to_storage(
+                mk().binary_op(das_op, promoted_place, rhs_val.val),
+                &writable_type(lhs_da_type.clone()),
+            );
+            let assign = DaExpr::Assign(Box::new(place.clone()), Box::new(value));
+            return Ok(lower_assignment_expr(assign, place, is_used)
+                .prepend_stmts(rhs_stmts)
+                .prepend_stmts(stmts)
+                .merge_unsafe(is_unsafe));
         }
 
         // Chain assignment: a = b = c → b = c; a = b
-        let mut rhs_val = self.convert_expr(ctx, rhs, Some(lhs_type_id))?;
+        let mut rhs_val = self.convert_expr(ctx.used(), rhs, Some(lhs_type_id))?;
         if let Some(stripped_rhs) =
             self.strip_const_deref_assignment_rhs(ctx, rhs, lhs_type_id, &lhs_da_type)?
         {
@@ -542,6 +726,86 @@ impl<'c> Translation<'c> {
             .merge_unsafe(lhs_val.is_unsafe || rhs_val.is_unsafe))
     }
 
+    /// Strip the C nodes that do not change an lvalue's identity.
+    fn strip_lvalue_wrappers(&self, mut expr: CExprId) -> CExprId {
+        loop {
+            match self.ast_context[expr].kind {
+                CExprKind::Paren(_, inner) => expr = inner,
+                CExprKind::Unary(_, CUnOp::Extension, inner, _) => expr = inner,
+                _ => return expr,
+            }
+        }
+    }
+
+    /// Convert an assignment target so that C's "the lvalue is evaluated
+    /// exactly once" rule holds.  `*get_cell() += 5` must call `get_cell`
+    /// once, so the address it produced becomes a temporary the read and the
+    /// write share.
+    pub(crate) fn convert_lvalue_once(
+        &self,
+        ctx: ExprContext,
+        expr_id: CExprId,
+        expr_type_id: CQualTypeId,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
+        let stripped = self.strip_lvalue_wrappers(expr_id);
+        if let CExprKind::Unary(_, CUnOp::Deref, ptr, _) = self.ast_context[stripped].kind {
+            let ptr_ty = self.ast_context[ptr]
+                .kind
+                .get_qual_type()
+                .ok_or_else(|| TranslationError::generic("dereferenced value has no C type"))?;
+            let pointer = self.convert_expr(ctx.used(), ptr, Some(ptr_ty))?;
+            let pointer = self.materialize_place_once(pointer, ptr_ty)?;
+            let is_unsafe = pointer.is_unsafe;
+            return Ok(pointer
+                .map(|v| DaExpr::Unsafe(Box::new(DaExpr::Deref(Box::new(v)))))
+                .merge_unsafe(is_unsafe));
+        }
+        self.convert_expr(ctx, expr_id, Some(expr_type_id))
+    }
+
+    /// Bind a place-producing expression to a temporary unless re-evaluating
+    /// it is provably free of effects.
+    fn materialize_place_once(
+        &self,
+        value: WithStmts<DaExpr>,
+        ty: CQualTypeId,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
+        fn is_stable(expr: &DaExpr) -> bool {
+            match expr {
+                DaExpr::Var(_) | DaExpr::ConstNull => true,
+                DaExpr::Field(base, _) | DaExpr::SafeField(base, _) => is_stable(base),
+                DaExpr::Unsafe(inner) => is_stable(inner),
+                _ => false,
+            }
+        }
+        if is_stable(&value.val) {
+            return Ok(value);
+        }
+        let tmp = self.renamer.borrow_mut().fresh();
+        let var_type = writable_type(self.convert_type(ty)?);
+        let is_unsafe = value.is_unsafe;
+        let mut stmts = value.stmts;
+        stmts.push(DaStmt::Var {
+            name: tmp.clone(),
+            var_type,
+            init: Some(value.val),
+        });
+        Ok(WithStmts::new(stmts, DaExpr::Var(tmp)).merge_unsafe(is_unsafe))
+    }
+
+    /// daScript scales `T? + n` by the pointee size exactly as C does; the
+    /// offset only has to be a signed integer so that `p - 1` stays negative.
+    pub(crate) fn pointer_offset_operand(&self, offset: DaExpr) -> DaExpr {
+        match Self::infer_type(&offset) {
+            Some(ty) if matches!(ty.kind, DaTypeKind::Int | DaTypeKind::Int64) => offset,
+            _ => DaExpr::Cast {
+                kind: das_ast::CastKind::Cast,
+                expr: Box::new(offset),
+                to: DaType::int64(),
+            },
+        }
+    }
+
     fn strip_const_deref_assignment_rhs(
         &self,
         ctx: ExprContext,
@@ -626,7 +890,9 @@ impl<'c> Translation<'c> {
                 DaExpr::Unsafe(Box::new(DaExpr::Op2 {
                     op: "+",
                     left: Box::new(l),
-                    right: Box::new(normalize_numeric_binop_tree(r)),
+                    right: Box::new(
+                        self.pointer_offset_operand(normalize_numeric_binop_tree(r)),
+                    ),
                 }))
             }))
         } else {
@@ -761,7 +1027,9 @@ impl<'c> Translation<'c> {
         use CUnOp::*;
         match name {
             AddressOf => {
-                let inner = self.convert_expr(ctx, arg, Some(cqual_type))?;
+                // `&x` has pointer type, but `x` does not: passing the result
+                // type down would make the operand cast itself to `T?`.
+                let inner = self.convert_expr(ctx, arg, None)?;
                 // Simplify addr(*ptr) → ptr: cancel the Deref+Addr pair.
                 // This avoids broken unsafe() scoping where daslang can't see
                 // that a pointer index inside Deref(Addr(...)) is actually
@@ -774,9 +1042,12 @@ impl<'c> Translation<'c> {
                 Ok(WithStmts::new_val(DaExpr::Unsafe(Box::new(val))).prepend_stmts(inner.stmts))
             }
             Deref => {
-                let inner = self.convert_expr(ctx, arg, Some(cqual_type))?;
+                // `*p` has the pointee type; the operand keeps the pointer type.
+                let inner = self.convert_expr(ctx, arg, None)?;
+                let is_unsafe = inner.is_unsafe;
                 Ok(WithStmts::new_val(DaExpr::Deref(Box::new(inner.val)))
-                    .prepend_stmts(inner.stmts))
+                    .prepend_stmts(inner.stmts)
+                    .merge_unsafe(is_unsafe))
             }
             Negate => self.convert_negate_operator(ctx, cqual_type, arg),
             Plus => self.convert_expr(ctx.used(), arg, Some(cqual_type)),
@@ -799,6 +1070,19 @@ impl<'c> Translation<'c> {
                             op: "==",
                             left: Box::new(v),
                             right: Box::new(DaExpr::ConstInt(0)),
+                        }));
+                    }
+                    if resolved_kind.is_floating_type() {
+                        // `!d` is `d == 0` in the operand's own floating type.
+                        // Comparing against an integer zero would make every
+                        // value with magnitude below one test as false.
+                        let zero = super::literals::floating_zero_for_datype(
+                            &self.convert_type(qty)?,
+                        );
+                        return Ok(val.map(|v| DaExpr::Op2 {
+                            op: "==",
+                            left: Box::new(v),
+                            right: Box::new(zero),
                         }));
                     }
                     if matches!(resolved_kind, CTypeKind::Enum(_)) {
@@ -855,47 +1139,7 @@ impl<'c> Translation<'c> {
         op: CBinOp,
         arg: CExprId,
     ) -> TranslationResult<WithStmts<DaExpr>> {
-        let inner = self.convert_expr(ctx.used(), arg, Some(ty))?;
-        // daScript requires matching types: if target is uint64/size_t, 1 must be uint64(1)
-        let resolved = self.ast_context.resolve_type(ty.ctype);
-        let target_da = type_kind_to_datype(&resolved.kind);
-        let is_ptr = self.is_pointer_type(ty.ctype);
-        let one = if matches!(
-            target_da.kind,
-            DaTypeKind::Int | DaTypeKind::Int8 | DaTypeKind::Int16
-        ) {
-            DaExpr::ConstInt(1)
-        } else {
-            DaExpr::Cast {
-                kind: das_ast::CastKind::Cast,
-                expr: Box::new(DaExpr::ConstInt(1)),
-                to: target_da,
-            }
-        };
-        let das_op = match op {
-            CBinOp::AssignAdd => "+",
-            CBinOp::AssignSubtract => "-",
-            _ => return Err(TranslationError::generic("invalid pre-increment op")),
-        };
-        let rhs = if is_ptr {
-            DaExpr::Unsafe(Box::new(DaExpr::Op2 {
-                op: das_op,
-                left: Box::new(inner.val.clone()),
-                right: Box::new(one),
-            }))
-        } else {
-            DaExpr::Op2 {
-                op: das_op,
-                left: Box::new(inner.val.clone()),
-                right: Box::new(one),
-            }
-        };
-        let inc_stmt = DaStmt::Expr(DaExpr::Assign(Box::new(inner.val.clone()), Box::new(rhs)));
-        Ok(WithStmts {
-            stmts: vec![inc_stmt],
-            val: inner.val,
-            is_unsafe: inner.is_unsafe,
-        })
+        self.convert_increment(ctx, ty, op, arg, false)
     }
 
     pub fn convert_post_increment(
@@ -905,58 +1149,65 @@ impl<'c> Translation<'c> {
         op: CBinOp,
         arg: CExprId,
     ) -> TranslationResult<WithStmts<DaExpr>> {
-        // Для x++ достаточно x += 1 (значение редко используется)
-        // C post-increment returns the old value. Materialize it before the
-        // assignment, rather than treating x++ as pre-increment.
-        let inner = self.convert_expr(ctx.used(), arg, Some(ty))?;
-        let target_da = type_kind_to_datype(&self.ast_context.resolve_type(ty.ctype).kind);
-        let old_name = self.renamer.borrow_mut().pick_name("c2da_postinc");
-        let old = DaExpr::Var(old_name.clone());
-        let one = if matches!(
-            target_da.kind,
-            DaTypeKind::Int | DaTypeKind::Int8 | DaTypeKind::Int16
-        ) {
-            DaExpr::ConstInt(1)
-        } else {
-            DaExpr::Cast {
-                kind: das_ast::CastKind::Cast,
-                expr: Box::new(DaExpr::ConstInt(1)),
-                to: target_da.clone(),
-            }
-        };
+        self.convert_increment(ctx, ty, op, arg, true)
+    }
+
+    /// `++x` / `x++` are `x += 1` with C's conversions: the read is promoted,
+    /// the arithmetic runs in the promoted type, and the result is narrowed
+    /// back into the storage type.  The operand is evaluated exactly once.
+    fn convert_increment(
+        &self,
+        ctx: ExprContext,
+        ty: CQualTypeId,
+        op: CBinOp,
+        arg: CExprId,
+        is_post: bool,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
         let das_op = match op {
             CBinOp::AssignAdd => "+",
             CBinOp::AssignSubtract => "-",
-            _ => return Err(TranslationError::generic("invalid post-increment op")),
+            _ => return Err(TranslationError::generic("invalid increment op")),
         };
-        let rhs = if self.is_pointer_type(ty.ctype) {
+        let arg_ty = self.ast_context[arg].kind.get_qual_type().unwrap_or(ty);
+        let place = self.convert_lvalue_once(ctx, arg, arg_ty)?;
+        let storage = writable_type(self.convert_type(arg_ty)?);
+        let kind = self.ast_context.resolve_type(arg_ty.ctype).kind.clone();
+        let new_value = if self.is_pointer_type(arg_ty.ctype) {
             DaExpr::Unsafe(Box::new(DaExpr::Op2 {
                 op: das_op,
-                left: Box::new(inner.val.clone()),
-                right: Box::new(one),
+                left: Box::new(place.val.clone()),
+                right: Box::new(DaExpr::ConstInt(1)),
             }))
         } else {
-            DaExpr::Op2 {
-                op: das_op,
-                left: Box::new(inner.val.clone()),
-                right: Box::new(one),
-            }
+            let arith = self
+                .arith_type_of_kind(&kind)
+                .ok_or_else(|| TranslationError::generic("increment of non-arithmetic C type"))?;
+            let one = if matches!(arith, abi::CArith::Int) {
+                DaExpr::ConstInt(1)
+            } else {
+                self.integer_literal_for_type(DaExpr::ConstInt(1), arith.da_type())
+            };
+            let promoted = self.promote_operand(place.val.clone(), &kind, arith);
+            self.narrow_to_storage(mk().binary_op(das_op, promoted, one), &storage)
         };
-        let mut stmts = inner.stmts;
-        stmts.push(DaStmt::Var {
-            name: old_name,
-            var_type: target_da,
-            init: Some(inner.val.clone()),
-        });
+        let is_unsafe = place.is_unsafe;
+        let mut stmts = place.stmts;
+        let result = if is_post {
+            let old_name = self.renamer.borrow_mut().pick_name("c2da_postinc");
+            stmts.push(DaStmt::Var {
+                name: old_name.clone(),
+                var_type: storage,
+                init: Some(place.val.clone()),
+            });
+            DaExpr::Var(old_name)
+        } else {
+            place.val.clone()
+        };
         stmts.push(DaStmt::Expr(DaExpr::Assign(
-            Box::new(inner.val),
-            Box::new(rhs),
+            Box::new(place.val),
+            Box::new(new_value),
         )));
-        Ok(WithStmts {
-            stmts,
-            val: old,
-            is_unsafe: inner.is_unsafe,
-        })
+        Ok(WithStmts::new(stmts, result).merge_unsafe(is_unsafe))
     }
 }
 

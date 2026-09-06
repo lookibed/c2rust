@@ -22,9 +22,8 @@ Use these owners, rather than fixing symptoms at rendering time:
 
 ## Runtime facts
 
-WSL `/root/c2das` is both the canonical Git workspace and execution target.  It is the only tree
-from which work is built, tested, committed, or pushed.  Windows is an optional terminal/UI host;
-its old checkout is archival only.  `/root/daScript/bin/daslang` is the runtime gate.
+Any Linux Git checkout of this repository is a valid workspace.  The real `daslang` binary
+(discovered via `DASLANG`, `DASROOT`, `PATH`, or `~/daScript`) is the runtime gate.
 
 Known fail-silent hazards are forbidden: post-render repairs, manual C layout outside `layout`,
 raw-pointer conversions outside `abi`, duplicate runtime-name tables, identity union lowering,

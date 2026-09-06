@@ -52,19 +52,25 @@ fn bulk_transpile_all_unit_tests() {
         let (_temp_dir, cc_path) =
             c2dascript_transpile::create_temp_compile_commands(&[c_path.to_path_buf()]);
 
+        // Survey output goes to a scratch directory; the survey must never
+        // rewrite the checked-in tests/unit/*/src/*.das files.
+        let output_dir = tempfile::tempdir().expect("temporary survey output directory");
         let tcfg = c2dascript_transpile::TranspilerConfig {
             verbose: false,
+            output_dir: Some(output_dir.path().to_owned()),
             ..Default::default()
         };
 
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            c2dascript_transpile::transpile(tcfg, &cc_path, &["-w"]);
+            c2dascript_transpile::transpile_checked(tcfg, &cc_path, &["-w"]).is_ok()
         }));
 
-        let das_path = c_path.with_extension("das");
+        let das_path = output_dir
+            .path()
+            .join(c_path.with_extension("das").file_name().unwrap());
         let das_content = std::fs::read_to_string(&das_path).unwrap_or_default();
 
-        if result.is_ok() && !das_content.is_empty() {
+        if matches!(result, Ok(true)) && !das_content.is_empty() {
             passed += 1;
             eprintln!("  PASS transpile: {}", name);
         } else if result.is_err() {
@@ -94,16 +100,5 @@ fn bulk_transpile_all_unit_tests() {
         "\n=== Results: {} PASS, {} FAIL, {} SKIP / {} total ===",
         passed, failed, skip, total
     );
-    if failed > 0 || skip > 0 {
-        eprintln!("--- Files to investigate ---");
-        for (name, path) in &files {
-            let c_path = Path::new(path);
-            let das_path = c_path.with_extension("das");
-            let das_content = std::fs::read_to_string(&das_path).unwrap_or_default();
-            if das_content.is_empty() {
-                eprintln!("  EMPTY: {} ({})", name, path);
-            }
-        }
-    }
     // Don't assert — this is a survey, not a pass/fail gate
 }

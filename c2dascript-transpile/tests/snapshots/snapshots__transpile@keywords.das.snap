@@ -1,9 +1,175 @@
 ---
 source: c2dascript-transpile/tests/snapshots.rs
-expression: cat tests/snapshots/keywords.das
+expression: transpile --strict tests/snapshots/keywords.c
 ---
 options gen2
 
+var c2da_rt_heap : array<uint8>
+
+var c2da_rt_next : uint64 = 0x0
+
+var c2da_rt_alloc_addrs : array<uint64>
+
+var c2da_rt_alloc_sizes : array<uint64>
+
+var c2da_rt_alloc_live : array<bool>
+
+def c2da_rt_init_heap() {
+    if (length(c2da_rt_heap) == 0) {
+        reserve(c2da_rt_heap, int(0x4000000))
+        resize(c2da_rt_heap, 1)
+    }
+}
+def c2da_rt_reset() {
+    c2da_rt_next = 0x0
+    resize(c2da_rt_alloc_addrs, 0)
+    resize(c2da_rt_alloc_sizes, 0)
+    resize(c2da_rt_alloc_live, 0)
+}
+def c2da_rt_malloc(size : uint64) : uint64 {
+    c2da_rt_init_heap()
+    if (size == 0x0) {
+        return 0x0
+    }
+    var start : uint64 = c2da_rt_next
+    var end : uint64 = start + size
+    if (end > 0x4000000) {
+        return 0x0
+    }
+    if (int(end) > length(c2da_rt_heap)) {
+        resize(c2da_rt_heap, int(end))
+    }
+    c2da_rt_next = end
+    var address : uint64 = unsafe(intptr(unsafe(addr(c2da_rt_heap[int(start)]))))
+    var record : uint64 = uint64(length(c2da_rt_alloc_addrs))
+    resize(c2da_rt_alloc_addrs, int(record + 0x1))
+    resize(c2da_rt_alloc_sizes, int(record + 0x1))
+    resize(c2da_rt_alloc_live, int(record + 0x1))
+    c2da_rt_alloc_addrs[int(record)] = address
+    c2da_rt_alloc_sizes[int(record)] = size
+    c2da_rt_alloc_live[int(record)] = true
+    return address
+}
+def c2da_rt_free(address : uint64) {
+    var i : uint64 = 0x0
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            c2da_rt_alloc_live[int(i)] = false
+            return
+        }
+        i = i + 0x1
+    }
+}
+def c2da_rt_realloc(address : uint64; size : uint64) : uint64 {
+    if (address == 0x0) {
+        return c2da_rt_malloc(size)
+    }
+    if (size == 0x0) {
+        c2da_rt_free(address)
+        return 0x0
+    }
+    var i : uint64 = 0x0
+    var old_size : uint64 = 0x0
+    var found : bool = false
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            old_size = c2da_rt_alloc_sizes[int(i)]
+            found = true
+        }
+        i = i + 0x1
+    }
+    if (found == false) {
+        return 0x0
+    }
+    var replacement : uint64 = c2da_rt_malloc(size)
+    if (replacement == 0x0) {
+        return 0x0
+    }
+    var copy_size : uint64 = 0x0
+    if (old_size < size) {
+        copy_size = old_size
+    } else {
+        copy_size = size
+    }
+    c2da_rt_memcpy(replacement, address, copy_size)
+    c2da_rt_free(address)
+    return replacement
+}
+def c2da_rt_memset(dst : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = value
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_calloc(count : uint64; size : uint64) : uint64 {
+    var total : uint64 = count * size
+    if (size != 0x0 && total / size != count) {
+        return 0x0
+    }
+    var address : uint64 = c2da_rt_malloc(total)
+    if (address != 0x0) {
+        c2da_rt_memset(address, uint8(0x0), total)
+    }
+    return address
+}
+def c2da_rt_memcpy(dst : uint64; src : uint64; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_memcmp(left : uint64; right : uint64; count : uint64) : int {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) < uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return -1
+        }
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) > uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return 1
+        }
+        i = i + 0x1
+    }
+    return 0
+}
+def c2da_rt_memmove(dst : uint64; src : uint64; count : uint64) : uint64 {
+    if (dst < src) {
+        var i : uint64 = 0x0
+        while (i < count) {
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+            i = i + 0x1
+        }
+    } else {
+        var i : uint64 = count
+        while (i > 0x0) {
+            i = i - 0x1
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        }
+    }
+    return dst
+}
+def c2da_rt_memchr(src : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)]) == value) {
+            return src + i
+        }
+        i = i + 0x1
+    }
+    return 0x0
+}
+struct C2daVaArg {
+    tag : int
+    i64 : int64
+    f64 : double
+    raw : uint64
+}
+struct C2daVaCursor {
+    index : int
+}
 def c2da_min_int(a : int; b : int) : int {
     if (a < b) {
         return a
@@ -70,7 +236,7 @@ def c2da_clip_uint(v : int) : uint {
     return uint(v)
 }
 def c2da_bool_to_uint(v : bool) : uint {
-    if (v) {
+    if (v == true) {
         return 0x1
     } else {
         return 0x0
@@ -79,168 +245,482 @@ def c2da_bool_to_uint(v : bool) : uint {
 def c2da___assert_fail(expr : void?; file : void?; line : uint; func : void?) {
 }
 [export]
+def abstract_0() {
+    return
+}
+[export]
+def as_0() {
+    return
+}
+[export]
+def byte16_0() {
+    return
+}
+[export]
+def byte2_0() {
+    return
+}
+[export]
+def byte3_0() {
+    return
+}
+[export]
+def byte4_0() {
+    return
+}
+[export]
+def byte8_0() {
+    return
+}
+[export]
+def false_0() {
+    return
+}
+[export]
+def float16_0() {
+    return
+}
+[export]
+def float2_0() {
+    return
+}
+[export]
+def float3_0() {
+    return
+}
+[export]
+def float4_0() {
+    return
+}
+[export]
+def half2_0() {
+    return
+}
+[export]
+def half3_0() {
+    return
+}
+[export]
+def half4_0() {
+    return
+}
+[export]
+def half8_0() {
+    return
+}
+[export]
+def include_0() {
+    return
+}
+[export]
+def inscope_0() {
+    return
+}
+[export]
+def int2_0() {
+    return
+}
+[export]
+def int3_0() {
+    return
+}
+[export]
+def int4_0() {
+    return
+}
+[export]
+def range_0() {
+    return
+}
+[export]
+def range64_0() {
+    return
+}
+[export]
+def short2_0() {
+    return
+}
+[export]
+def short3_0() {
+    return
+}
+[export]
+def short4_0() {
+    return
+}
+[export]
+def short8_0() {
+    return
+}
+[export]
+def string_0() {
+    return
+}
+[export]
+def true_0() {
+    return
+}
+[export]
+def typeinfo_0() {
+    return
+}
+[export]
+def ubyte16_0() {
+    return
+}
+[export]
+def ubyte2_0() {
+    return
+}
+[export]
+def ubyte3_0() {
+    return
+}
+[export]
+def ubyte4_0() {
+    return
+}
+[export]
+def ubyte8_0() {
+    return
+}
+[export]
+def uint2_0() {
+    return
+}
+[export]
+def uint3_0() {
+    return
+}
+[export]
+def uint4_0() {
+    return
+}
+[export]
+def uninitialized_0() {
+    return
+}
+[export]
+def urange_0() {
+    return
+}
+[export]
+def urange64_0() {
+    return
+}
+[export]
+def ushort2_0() {
+    return
+}
+[export]
+def ushort3_0() {
+    return
+}
+[export]
+def ushort4_0() {
+    return
+}
+[export]
+def ushort8_0() {
+    return
+}
+[export]
 def addr_0() {
+    return
+}
+[export]
+def aka_0() {
+    return
 }
 [export]
 def alias_0() {
+    return
 }
 [export]
 def array_0() {
+    return
+}
+[export]
+def assume_0() {
+    return
 }
 [export]
 def block_0() {
+    return
+}
+[export]
+def bitfield_0() {
+    return
 }
 [export]
 def bool_0() {
+    return
+}
+[export]
+def capture_0() {
+    return
 }
 [export]
 def cast_0() {
+    return
+}
+[export]
+def class_0() {
+    return
 }
 [export]
 def def_0() {
+    return
 }
 [export]
 def delete_0() {
+    return
 }
 [export]
 def deref_0() {
+    return
 }
 [export]
 def elif_0() {
+    return
+}
+[export]
+def expect_0() {
+    return
 }
 [export]
 def explicit_0() {
+    return
 }
 [export]
 def export_0() {
+    return
 }
 [export]
 def finally_0() {
+    return
 }
 [export]
 def fixed_array_0() {
+    return
 }
 [export]
 def function_0() {
+    return
 }
 [export]
 def gen2_0() {
+    return
+}
+[export]
+def generator_0() {
+    return
 }
 [export]
 def global_0() {
+    return
+}
+[export]
+def implicit_0() {
+    return
 }
 [export]
 def in_0() {
+    return
 }
 [export]
 def init_0() {
+    return
 }
 [export]
 def int16_0() {
+    return
 }
 [export]
 def int64_0() {
+    return
 }
 [export]
 def int8_0() {
+    return
 }
 [export]
 def is_0() {
+    return
 }
 [export]
 def iterator_0() {
+    return
 }
 [export]
 def label_0() {
+    return
+}
+[export]
+def lambda_0() {
+    return
 }
 [export]
 def let_0() {
+    return
 }
 [export]
 def module_0() {
+    return
 }
 [export]
 def new_0() {
+    return
 }
 [export]
 def none_0() {
+    return
 }
 [export]
 def not_0() {
+    return
 }
 [export]
 def null_0() {
+    return
+}
+[export]
+def operator_0() {
+    return
 }
 [export]
 def options_0() {
+    return
 }
 [export]
 def override_0() {
+    return
 }
 [export]
 def param_0() {
+    return
+}
+[export]
+def pass_0() {
+    return
 }
 [export]
 def private_0() {
+    return
 }
 [export]
 def public_0() {
+    return
+}
+[export]
+def recover_0() {
+    return
 }
 [export]
 def reinterpret_0() {
+    return
 }
 [export]
 def require_0() {
+    return
 }
 [export]
 def result_0() {
+    return
 }
 [export]
 def sealed_0() {
+    return
+}
+[export]
+def shared_0() {
+    return
+}
+[export]
+def smart_ptr_0() {
+    return
+}
+[export]
+def static_elif_0() {
+    return
+}
+[export]
+def static_if_0() {
+    return
 }
 [export]
 def table_0() {
+    return
+}
+[export]
+def template_0() {
+    return
 }
 [export]
 def then_0() {
+    return
 }
 [export]
 def to_0() {
+    return
 }
 [export]
 def try_0() {
+    return
+}
+[export]
+def tuple_0() {
+    return
 }
 [export]
 def type_0() {
+    return
+}
+[export]
+def typedecl_0() {
+    return
 }
 [export]
 def uint_0() {
+    return
 }
 [export]
 def uint16_0() {
+    return
 }
 [export]
 def uint64_0() {
+    return
 }
 [export]
 def uint8_0() {
+    return
 }
 [export]
 def unsafe_0() {
+    return
 }
 [export]
 def upcast_0() {
+    return
 }
 [export]
 def var_0() {
+    return
+}
+[export]
+def variant_0() {
+    return
+}
+[export]
+def where_0() {
+    return
 }
 [export]
 def with_0() {
+    return
 }
 [export]
 def yield_0() {
-}
-
-[export] def main() : int {
-    return 0
+    return
 }

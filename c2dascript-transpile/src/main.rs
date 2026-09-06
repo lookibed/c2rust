@@ -81,12 +81,18 @@ fn take_option(args: &mut Vec<String>, option: &str) -> Option<std::path::PathBu
 }
 
 fn run(config: c2dascript_transpile::TranspilerConfig, cc_db: &Path, extra: &[&str], strict: bool) {
+    // A failed translation is a failure in both modes. The two differ only in
+    // whether the remaining translation units are still attempted; neither may
+    // report success for a file that produced no output.
     if strict {
         if let Err(error) = c2dascript_transpile::transpile_checked(config, cc_db, extra) {
             eprintln!("translation failed: {error}");
             std::process::exit(2);
         }
-    } else {
-        c2dascript_transpile::transpile(config, cc_db, extra);
+    } else if let Err(errors) = c2dascript_transpile::transpile(config, cc_db, extra) {
+        for error in &errors {
+            eprintln!("translation failed: {error}");
+        }
+        std::process::exit(2);
     }
 }

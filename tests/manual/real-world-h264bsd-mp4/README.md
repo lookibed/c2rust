@@ -42,7 +42,7 @@ tests\manual\real-world-h264bsd-mp4\compile_commands.json
 The expected development pipeline is still:
 
 1. edit code in the Windows c2dascript tree
-2. copy changed source files to `/root/c2dascript`
+2. apply the changed source files to your checkout
 3. build/transpile from WSL
 4. verify generated `.das` with the Windows `daslang.exe`
 

@@ -226,6 +226,333 @@
       "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "union_cast_runtime", "return_type": "int" }, "das_entrypoint": "union_cast_runtime", "expected": { "stdout": "", "exit_code": 0 }, "rust_assertion": "ptr_tests::p41_union_cast_initializes_raw_storage", "runtime": "required"
     },
     {
+      "id": "p42-loops", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p42_loops.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "loops_runtime", "return_type": "int" }, "das_entrypoint": "loops_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p43-switch", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p43_switch.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "switch_runtime", "return_type": "int" }, "das_entrypoint": "switch_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p44-goto", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p44_goto.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "goto_runtime", "return_type": "int" }, "das_entrypoint": "goto_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p45-static-local", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p45_static_local.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "static_local_runtime", "return_type": "int" }, "das_entrypoint": "static_local_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p46-function-pointers", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p46_function_pointers.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "function_pointer_runtime", "return_type": "int" }, "das_entrypoint": "function_pointer_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p47-side-effects", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p47_side_effects.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "side_effects_runtime", "return_type": "int" }, "das_entrypoint": "side_effects_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p48-integer-semantics", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p48_integer_semantics.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "integer_semantics_runtime", "return_type": "int" }, "das_entrypoint": "integer_semantics_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p49-floating", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p49_floating.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "floating_runtime", "return_type": "int" }, "das_entrypoint": "floating_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p50-printer", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p50_printer.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "printer_runtime", "return_type": "int" }, "das_entrypoint": "printer_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "p51-arrays", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p51_arrays.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "arrays_runtime", "return_type": "int" }, "das_entrypoint": "arrays_runtime", "expected": { "stdout": "", "exit_code": 0 }, "runtime": "required"
+    },
+    {
+      "id": "n06-unknown-extern-call", "status": "negative", "source_root": "tests/syntax", "translation_entry": "n06_unknown_extern_call.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "not-applicable", "return_type": "int" }, "das_entrypoint": "not-applicable", "expected": { "stdout": "", "exit_code": 0 },
+      "expected_error": { "operation": "top-level declaration lowering", "type": "Function", "location": "n06_unknown_extern_call.c", "cause": "unsupported external call: absolute_value" }, "runtime": "not-applicable"
+    },
+    {
+      "id": "n07-unknown-builtin", "status": "negative", "source_root": "tests/syntax", "translation_entry": "n07_unknown_builtin.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "not-applicable", "return_type": "int" }, "das_entrypoint": "not-applicable", "expected": { "stdout": "", "exit_code": 0 },
+      "expected_error": { "operation": "top-level declaration lowering", "type": "Function", "location": "n07_unknown_builtin.c", "cause": "unsupported builtin __builtin_alloca" }, "runtime": "not-applicable"
+    },
+    {
+      "id": "n08-unsupported-field-type", "status": "negative", "source_root": "tests/syntax", "translation_entry": "n08_unsupported_field_type.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "not-applicable", "return_type": "int" }, "das_entrypoint": "not-applicable", "expected": { "stdout": "", "exit_code": 0 },
+      "expected_error": { "operation": "type declaration lowering", "type": "Struct", "location": "n08_unsupported_field_type.c", "cause": "unsupported vector field type" }, "runtime": "not-applicable"
+    },
+    {
+      "id": "legacy-c01-complex", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c01_complex.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c01-const-int", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c01_const_int.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c02-const-ptr", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c02_const_ptr.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c03-ptr-to-const", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c03_ptr_to_const.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c04-const-array", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c04_const_array.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c05-const-struct-ptr", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c05_const_struct_ptr.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c06-const-chain", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c06_const_chain.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c07-const-assign", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c07_const_assign.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c08-const-static", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c08_const_static.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c09-const-multi", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c09_const_multi.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-c10-const-mixed", "status": "ready", "source_root": "tests/syntax", "translation_entry": "c10_const_mixed.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d01-basic", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d01_basic.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d01-dowhile", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d01_dowhile.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d02-dowhile-break", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d02_dowhile_break.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d02-once", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d02_once.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d03-dowhile-continue", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d03_dowhile_continue.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d03-zero", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d03_zero.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d04-break", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d04_break.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d04-dowhile-once", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d04_dowhile_once.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d05-continue", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d05_continue.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d05-dowhile-zero", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d05_dowhile_zero.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d06-dowhile-nest", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d06_dowhile_nest.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d06-nested-do", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d06_nested_do.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d07-do-while-var", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d07_do_while_var.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d07-ptr-arith", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d07_ptr_arith.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d08-do-in-while", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d08_do_in_while.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d08-ptr-arrow", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d08_ptr_arrow.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d09-continue-in-while", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d09_continue_in_while.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-d10-sum-do", "status": "ready", "source_root": "tests/syntax", "translation_entry": "d10_sum_do.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-g01-goto-basic", "status": "ready", "source_root": "tests/syntax", "translation_entry": "g01_goto_basic.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-g02-goto-loop", "status": "ready", "source_root": "tests/syntax", "translation_entry": "g02_goto_loop.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-g03-goto-forward", "status": "ready", "source_root": "tests/syntax", "translation_entry": "g03_goto_forward.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p01-ptr-deref", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p01_ptr_deref.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p01-ptr-int", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p01_ptr_int.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p02-ptr-assign", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p02_ptr_assign.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p03-ptr-add", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p03_ptr_add.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p04-arrow-basic", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p04_arrow_basic.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p05-arrow-chain", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p05_arrow_chain.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p06-ptr-to-ptr", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p06_ptr_to_ptr.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p07-ptr-arith", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p07_ptr_arith.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p08-arrow-func", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p08_arrow_func.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p09-ptr-null", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p09_ptr_null.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-p10-ptr-swap", "status": "ready", "source_root": "tests/syntax", "translation_entry": "p10_ptr_swap.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-s01-switch-basic", "status": "ready", "source_root": "tests/syntax", "translation_entry": "s01_switch_basic.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-s02-switch-default", "status": "ready", "source_root": "tests/syntax", "translation_entry": "s02_switch_default.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-s03-switch-fallthrough", "status": "ready", "source_root": "tests/syntax", "translation_entry": "s03_switch_fallthrough.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t01-arith", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t01_arith.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t01-typedef-simple", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t01_typedef_simple.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t02-mul-div", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t02_mul_div.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t02-typedef-ptr", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t02_typedef_ptr.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t03-cmp", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t03_cmp.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t03-typedef-struct", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t03_typedef_struct.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t04-logical", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t04_logical.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t05-if-elif", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t05_if_elif.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t06-while", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t06_while.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t07-for", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t07_for.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t08-struct", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t08_struct.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t09-enum", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t09_enum.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t10-chain", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t10_chain.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-t11-bool-precedence", "status": "ready", "source_root": "tests/syntax", "translation_entry": "t11_bool_precedence.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-test-full", "status": "ready", "source_root": "tests/syntax", "translation_entry": "test_full.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-test-member", "status": "ready", "source_root": "tests/syntax", "translation_entry": "test_member.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-test-simple", "status": "ready", "source_root": "tests/syntax", "translation_entry": "test_simple.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-test-struct-full", "status": "ready", "source_root": "tests/syntax", "translation_entry": "test_struct_full.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-u01-unsafe-ptr", "status": "ready", "source_root": "tests/syntax", "translation_entry": "u01_unsafe_ptr.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-u02-unsafe-write", "status": "ready", "source_root": "tests/syntax", "translation_entry": "u02_unsafe_write.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-u03-unsafe-swap", "status": "ready", "source_root": "tests/syntax", "translation_entry": "u03_unsafe_swap.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
+      "id": "legacy-ztest-inc", "status": "ready", "source_root": "tests/syntax", "translation_entry": "ztest_inc.c", "c_graph": "single-tu",
+      "clang": { "compiler": "clang-18", "flags": ["-w"] }, "c_reference": { "entrypoint": "main", "return_type": "int" }, "das_entrypoint": "main_0", "expected": { "oracle": "c-reference" }, "runtime": "required"
+    },
+    {
       "id": "plmpeg-stream",
       "status": "known-red",
       "source_root": "tests/manual/real-world-plmpeg-stream",

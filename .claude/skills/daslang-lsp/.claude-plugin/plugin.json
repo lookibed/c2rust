@@ -1,0 +1,22 @@
+{
+  "name": "daslang-lsp",
+  "description": "daslang language server (pinned wasm3das toolchain) - compiler diagnostics after every edit, plus definition/hover/references/symbols",
+  "lspServers": {
+    "daslang": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/../../../tmp/daslang-toolchain/utils/lsp/lsp_supervisor.py"
+      ],
+      "env": {
+        "DAS_LINT_CONFIG_PATH": "${CLAUDE_PLUGIN_ROOT}/../../../.lint_config"
+      },
+      "extensionToLanguage": {
+        ".das": "daslang"
+      },
+      "initializationOptions": {
+        "compiler": "tmp/daslang-toolchain/bin/daslang",
+        "project_root": "."
+      }
+    }
+  }
+}

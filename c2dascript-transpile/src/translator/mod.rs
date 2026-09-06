@@ -249,6 +249,10 @@ pub struct Translation<'c> {
     pub emitted_structs: std::cell::RefCell<std::collections::HashSet<String>>,
     pub emitted_anon_structs: std::cell::RefCell<std::collections::HashSet<(String, Vec<String>)>>,
     pub(crate) layout_cache: RefCell<HashMap<CTypeId, self::layout::CLayout>>,
+    /// Module-level variables synthesised while lowering function bodies.
+    /// Currently only C function-scope `static` storage, which has to outlive
+    /// the call that declares it. Drained once, by `translate_impl`.
+    pub(crate) hoisted_statics: RefCell<Vec<DaDecl>>,
     pub main_file: PathBuf,
 }
 
@@ -261,10 +265,16 @@ impl<'c> Translation<'c> {
             emitted_structs: std::cell::RefCell::new(std::collections::HashSet::new()),
             emitted_anon_structs: std::cell::RefCell::new(std::collections::HashSet::new()),
             layout_cache: RefCell::new(HashMap::new()),
+            hoisted_statics: RefCell::new(vec![]),
             ast_context,
             tcfg,
             main_file: main_file.to_path_buf(),
         }
+    }
+
+    /// Take the module-level variables synthesised for function-scope `static`s.
+    pub(crate) fn take_hoisted_statics(&self) -> Vec<DaDecl> {
+        std::mem::take(&mut *self.hoisted_statics.borrow_mut())
     }
 
     pub fn declare_value_name(&self, decl_id: CDeclId, name: &str) -> String {
@@ -283,14 +293,6 @@ impl<'c> Translation<'c> {
     pub fn convert_decl(&self, ctx: ExprContext, decl_id: CDeclId) -> TranslationResult<DaDecl> {
         let decl = &self.ast_context[decl_id];
         use CDeclKind::*;
-        // Skip functions with patterns daScript не поддерживает
-        if let Function { name, .. } = &decl.kind {
-            if *name == "header_annexb_size" || *name == "build_annexb_sample" {
-                return Err(TranslationError::generic(
-                    "skipped — assignment in while condition",
-                ));
-            }
-        }
         match &decl.kind {
             Function {
                 name,
@@ -465,7 +467,18 @@ impl<'c> Translation<'c> {
                 let resolved_id = self.ast_context.resolve_type_id(typ.ctype);
                 let final_type = match self.convert_type_inner(resolved_id) {
                     Ok(t) if !matches!(t.kind, DaTypeKind::Auto) => t,
-                    _ => {
+                    Err(_) => {
+                        // An alias for a C type with no daScript
+                        // representation gets no declaration of its own.
+                        // Aliasing it to `auto` would hide the gap and let
+                        // every use of the name silently lower to something
+                        // else; the diagnostic belongs at each use site, where
+                        // the type actually has to be laid out.
+                        return Err(TranslationError::generic(
+                            "typedef target has no daScript representation; reported at each use",
+                        ));
+                    }
+                    Ok(_) => {
                         let r = self.ast_context.resolve_type(resolved_id);
                         type_kind_to_datype(&r.kind)
                     }
@@ -959,9 +972,21 @@ impl<'c> Translation<'c> {
 
         use CExprKind::*;
         match expr_kind {
-            Literal(ty, lit) => self
-                .convert_literal(override_ty.unwrap_or(*ty), lit)
-                .map(WithStmts::new_val),
+            Literal(ty, lit) => {
+                // `char s[] = "abc"` initializes array storage, not a string
+                // handle: C copies the bytes plus the terminating NUL.
+                let literal_ty = override_ty.unwrap_or(*ty);
+                if let CLiteral::String(bytes, width) = lit {
+                    if let CTypeKind::ConstantArray(elem, size) =
+                        self.ast_context.resolve_type(literal_ty.ctype).kind
+                    {
+                        return self
+                            .string_literal_array(bytes, *width, elem, size)
+                            .map(WithStmts::new_val);
+                    }
+                }
+                self.convert_literal(literal_ty, lit).map(WithStmts::new_val)
+            }
 
             Binary(ty, op, lhs, rhs, lty, rty) => {
                 let value = self.convert_binary_expr(ctx, *ty, *op, *lhs, *rhs, *lty, *rty)?;
@@ -981,20 +1006,16 @@ impl<'c> Translation<'c> {
                 // fails for nullable arrays; always wrapping is safe since
                 // redundant unsafe(unsafe(...)) is harmless in daScript.
                 let needs_unsafe = true;
-                let idx_expr = match Self::infer_type(&idx_val.val) {
-                    Some(ty) if matches!(ty.kind, DaTypeKind::Int | DaTypeKind::UInt) => {
-                        idx_val.val
-                    }
-                    _ => DaExpr::Cast {
-                        kind: das_ast::CastKind::Cast,
-                        expr: Box::new(idx_val.val),
-                        to: DaType::uint(),
-                    },
-                };
+                // A C subscript index is signed: `p[-1]` is a legal read of
+                // the element before `p`.  Coercing it to `uint` would turn
+                // that into a four-billion-element offset.
+                let idx_expr = self.subscript_index_operand(idx_val.val);
                 let arr_expr = if let Some(arr_ty) = self.ast_context[*arr].kind.get_qual_type() {
                     let target_type = self.convert_type(arr_ty)?;
                     if matches!(target_type.kind, DaTypeKind::Pointer(_))
                         && !matches!(arr_val.val, DaExpr::Unsafe(_))
+                        && Self::infer_type(&arr_val.val)
+                            .map_or(true, |inferred| writable_type(inferred) != target_type)
                     {
                         self.abi_pointer_cast(arr_val.val, target_type)
                     } else {
@@ -1051,6 +1072,25 @@ impl<'c> Translation<'c> {
             ImplicitCast(ty, expr, cast_kind, _, _) => {
                 if matches!(cast_kind, CastKind::NullToPointer) {
                     return Ok(WithStmts::new_val(self.null_for_type(*ty)?));
+                }
+                // C `_Bool b = x` is `x != 0`, never a numeric reinterpretation.
+                // daScript has no conversion to bool at all, so the comparison
+                // is the only correct lowering.
+                if matches!(
+                    cast_kind,
+                    CastKind::IntegralToBoolean
+                        | CastKind::FloatingToBoolean
+                        | CastKind::PointerToBoolean
+                ) {
+                    return self.convert_to_boolean(ctx, *expr);
+                }
+                // C decays a function designator to a pointer wherever a value
+                // is wanted. daScript has function values instead of function
+                // pointers, and `@@name` is how one is taken.
+                if matches!(cast_kind, CastKind::FunctionToPointerDecay) {
+                    if let Some(name) = self.direct_function_reference(*expr) {
+                        return Ok(WithStmts::new_val(DaExpr::FuncRef(name)));
+                    }
                 }
                 if matches!(cast_kind, CastKind::BooleanToSignedIntegral) {
                     let target_type = self.convert_type(ty.clone())?;
@@ -1123,6 +1163,20 @@ impl<'c> Translation<'c> {
                 if matches!(cast_kind, CastKind::IntegralCast) {
                     let inner = self.convert_expr(ctx, *expr, None)?;
                     let target_type = self.convert_type(ty.clone())?;
+                    // Clang spells `_Bool` → integer as an ordinary integral
+                    // cast; daScript has no conversion from bool, so it goes
+                    // through the 0/1 materialization instead.
+                    let source_ty = self.ast_context[*expr].kind.get_qual_type();
+                    if source_ty.map_or(false, |q| {
+                        matches!(self.ast_context.resolve_type(q.ctype).kind, CTypeKind::Bool)
+                    }) {
+                        return self.lower_to_c_value(
+                            inner,
+                            source_ty,
+                            writable_type(target_type),
+                            ValueSite::BinaryOperand,
+                        );
+                    }
                     let inner_unsafe = inner.is_unsafe;
                     let mut stmts = inner.stmts;
                     let inner_val = inner.val;
@@ -1158,7 +1212,21 @@ impl<'c> Translation<'c> {
                     if let Some(place) = self.member_place_address(ctx, *expr)? {
                         let raw = self.raw_address_of_place(&place);
                         let target = self.convert_type(*ty)?;
-                        return Ok(raw.map(|raw| self.raw_address_to_pointer(raw, target)));
+                        // daScript refuses to write through a pointer built
+                        // inline from address arithmetic (its dead-write
+                        // policy), so the decayed pointer becomes a named
+                        // value that both reads and writes can address.
+                        let is_unsafe = raw.is_unsafe;
+                        let pointer = raw.map(|raw| self.raw_address_to_pointer(raw, target.clone()));
+                        let tmp = self.renamer.borrow_mut().fresh();
+                        let mut stmts = pointer.stmts;
+                        stmts.push(DaStmt::Var {
+                            name: tmp.clone(),
+                            var_type: writable_type(target),
+                            init: Some(pointer.val),
+                        });
+                        return Ok(WithStmts::new(stmts, DaExpr::Var(tmp))
+                            .merge_unsafe(is_unsafe || pointer.is_unsafe));
                     }
                     let inner = self.convert_expr(ctx, *expr, Some(*ty))?;
                     let idx = mk().int_lit(0);
@@ -1220,6 +1288,14 @@ impl<'c> Translation<'c> {
             }
 
             ExplicitCast(ty, expr, cast_kind, _, _) => {
+                if matches!(
+                    cast_kind,
+                    CastKind::IntegralToBoolean
+                        | CastKind::FloatingToBoolean
+                        | CastKind::PointerToBoolean
+                ) {
+                    return self.convert_to_boolean(ctx, *expr);
+                }
                 let target_type = self.convert_type(ty.clone())?;
                 let source_is_bool = self.ast_context[*expr]
                     .kind
@@ -1296,13 +1372,15 @@ impl<'c> Translation<'c> {
                         .prepend_stmts(inner.stmts)
                         .merge_unsafe(inner.is_unsafe));
                 }
-                // If source and target map to the same daScript type, skip the cast.
+                // If source and target are the same daScript type, skip the cast.
                 // This avoids `can't cast uint8?& -const to uint8?` when a C pointer
-                // variable/reference is assigned to the same pointer type.
+                // variable/reference is assigned to the same pointer type.  The
+                // comparison uses the full converted types: two C pointers with
+                // different pointees are different daScript types and the cast
+                // between them is load-bearing.
                 if let Some(src_qual) = self.ast_context[*expr].kind.get_qual_type() {
-                    let da_src =
-                        type_kind_to_datype(&self.ast_context.resolve_type(src_qual.ctype).kind);
-                    let da_tgt = type_kind_to_datype(&self.ast_context.resolve_type(ty.ctype).kind);
+                    let da_src = writable_type(self.convert_type(src_qual)?);
+                    let da_tgt = writable_type(target_type.clone());
                     if da_src == da_tgt {
                         return Ok(WithStmts::new_val(inner.val)
                             .prepend_stmts(inner.stmts)
@@ -1354,17 +1432,19 @@ impl<'c> Translation<'c> {
                     return Ok(struct_init);
                 }
                 let mut is_unsafe = false;
+                let mut init_stmts = vec![];
                 let mut items = vec![];
                 let item_ty = self.init_list_item_type(*ty);
                 let item_override = item_ty.unwrap_or(*ty);
                 for &eid in init_ids {
-                    let mut item = self.convert_expr(ctx, eid, Some(item_override))?;
+                    let mut item = self.convert_expr(ctx.used(), eid, Some(item_override))?;
                     if let Some(elem_ty) = item_ty {
                         if is_zero_initializer_expr(&item.val) {
                             item.val = self.default_initializer_for_ctype(elem_ty.ctype)?;
                         }
                     }
                     is_unsafe |= item.is_unsafe;
+                    init_stmts.extend(item.stmts);
                     items.push(item.val);
                 }
                 // Clang omits trailing aggregate members from InitList. C
@@ -1373,21 +1453,39 @@ impl<'c> Translation<'c> {
                 if let CTypeKind::ConstantArray(elem_ty, size) =
                     &self.ast_context.resolve_type(ty.ctype).kind
                 {
-                    while items.len() < *size {
-                        items.push(self.default_initializer_for_ctype(*elem_ty)?);
+                    let size = *size;
+                    let elem_ty = *elem_ty;
+                    while items.len() < size {
+                        items.push(self.default_initializer_for_ctype(elem_ty)?);
                     }
+                    items.truncate(size);
+                    let elem_da = writable_type(self.convert_type_raw(elem_ty)?);
+                    return Ok(WithStmts::new_val(DaExpr::MakeFixedArray {
+                        elem_type: elem_da,
+                        items,
+                    })
+                    .prepend_stmts(init_stmts)
+                    .merge_unsafe(is_unsafe));
                 }
-                Ok(WithStmts::new_val(DaExpr::MakeArray(items)).merge_unsafe(is_unsafe))
+                Ok(WithStmts::new_val(DaExpr::MakeArray(items))
+                    .prepend_stmts(init_stmts)
+                    .merge_unsafe(is_unsafe))
             }
-            UnaryType(_ty, kind, _opt_expr, arg_ty) => match kind {
-                CUnTypeOp::SizeOf => Ok(WithStmts::new_val(DaExpr::ConstInt(
-                    self.sizeof_type(arg_ty.ctype)?,
-                ))),
-                CUnTypeOp::AlignOf => Ok(WithStmts::new_val(DaExpr::ConstInt(
-                    self.alignof_type(arg_ty.ctype)?,
-                ))),
-                _ => Err(TranslationError::generic("unsupported unary type op")),
-            },
+            // `sizeof`/`_Alignof` have type `size_t`, not `int`. Typing them
+            // here is what lets `sizeof(int) * n` with an `unsigned long` n
+            // keep C's uint64 arithmetic instead of narrowing n to int.
+            UnaryType(ty, kind, _opt_expr, arg_ty) => {
+                let result_type = self.convert_type(*ty).unwrap_or_else(|_| DaType::uint64());
+                let value = match kind {
+                    CUnTypeOp::SizeOf => self.sizeof_type(arg_ty.ctype)?,
+                    CUnTypeOp::AlignOf => self.alignof_type(arg_ty.ctype)?,
+                    _ => return Err(TranslationError::generic("unsupported unary type op")),
+                };
+                Ok(WithStmts::new_val(self.integer_literal_for_type(
+                    DaExpr::ConstInt(value),
+                    writable_type(result_type),
+                )))
+            }
             CompoundLiteral(ty, expr) => self.convert_expr(ctx, *expr, Some(*ty)),
             Predefined(_ty, expr) => self.convert_predefined_expression(ctx, *expr, override_ty),
             Paren(_ty, expr) => self.convert_expr(ctx, *expr, override_ty),
@@ -1457,96 +1555,73 @@ impl<'c> Translation<'c> {
             // daScript не поддерживает if-then-else как выражение.
             // Разворачиваем в var _tmp; if (c) _tmp = a else _tmp = b; val = _tmp
             Conditional(ty, cond, then, else_) => {
-                let cond_e = self.convert_expr(ctx, *cond, None)?;
-                let then_e = self.convert_expr(ctx, *then, None)?;
-                let else_e = self.convert_expr(ctx, *else_, None)?;
-                if let Some(minmax) =
-                    lower_minmax_conditional(&cond_e.val, &then_e.val, &else_e.val)
-                {
-                    let mut c_stmts = cond_e.stmts;
-                    c_stmts.extend(then_e.stmts);
-                    c_stmts.extend(else_e.stmts);
-                    return Ok(WithStmts {
-                        stmts: c_stmts,
-                        val: minmax,
-                        is_unsafe: cond_e.is_unsafe || then_e.is_unsafe || else_e.is_unsafe,
-                    });
+                // C evaluates exactly one arm.  Every statement an arm needed
+                // to hoist therefore has to move *inside* that arm's block,
+                // not in front of the `if`.  The selector is a C truth test,
+                // exactly like the one in `if`, so it goes through
+                // `convert_condition` rather than being lowered as a value.
+                let cond_e = self.convert_condition(ctx, true, *cond)?;
+                let then_e = self.convert_expr(ctx.used(), *then, Some(*ty))?;
+                let else_e = self.convert_expr(ctx.used(), *else_, Some(*ty))?;
+                if then_e.is_pure() && else_e.is_pure() {
+                    if let Some(minmax) =
+                        lower_minmax_conditional(&cond_e.val, &then_e.val, &else_e.val)
+                    {
+                        return Ok(WithStmts {
+                            stmts: cond_e.stmts,
+                            val: minmax,
+                            is_unsafe: cond_e.is_unsafe || then_e.is_unsafe || else_e.is_unsafe,
+                        });
+                    }
                 }
-                let tmp = self.renamer.borrow_mut().fresh();
-                let tmp_var = DaExpr::Var(tmp.clone());
                 let tmp_type = writable_type(self.convert_type(*ty)?);
-                let then_assign = DaStmt::Expr(DaExpr::Assign(
-                    Box::new(tmp_var.clone()),
-                    Box::new(then_e.val),
-                ));
-                let else_assign = DaStmt::Expr(DaExpr::Assign(
-                    Box::new(tmp_var.clone()),
-                    Box::new(else_e.val),
-                ));
-                let if_stmt = DaStmt::Expr(DaExpr::IfThenElse {
-                    cond: Box::new(cond_e.val),
-                    then: Box::new(DaExpr::Block(DaBlock {
-                        stmts: vec![then_assign],
-                    })),
-                    elifs: vec![],
-                    else_: Some(Box::new(DaExpr::Block(DaBlock {
-                        stmts: vec![else_assign],
-                    }))),
-                });
-                let var_decl = DaStmt::Var {
-                    name: tmp.clone(),
-                    var_type: tmp_type.clone(),
-                    init: Some(zero_for_datype(&tmp_type)),
-                };
+                let is_unsafe = cond_e.is_unsafe || then_e.is_unsafe || else_e.is_unsafe;
                 let mut c_stmts = cond_e.stmts;
-                c_stmts.extend(then_e.stmts);
-                c_stmts.extend(else_e.stmts);
-                c_stmts.push(var_decl);
-                c_stmts.push(if_stmt);
+                let (tmp_var, decl_and_if) = self.guarded_value_branches(
+                    &tmp_type,
+                    cond_e.val,
+                    then_e.map(|v| self.coerce_branch_value(v, &tmp_type)),
+                    Some(else_e.map(|v| self.coerce_branch_value(v, &tmp_type))),
+                );
+                c_stmts.extend(decl_and_if);
                 Ok(WithStmts {
                     stmts: c_stmts,
                     val: tmp_var,
-                    is_unsafe: cond_e.is_unsafe || then_e.is_unsafe || else_e.is_unsafe,
+                    is_unsafe,
                 })
             }
-            // GNU binary conditional — a ?: b (a if truthy else b)
+            // GNU binary conditional — a ?: b evaluates `a` exactly once.
             BinaryConditional(ty, cond, else_) => {
-                let cond_e = self.convert_expr(ctx, *cond, None)?;
-                let else_e = self.convert_expr(ctx, *else_, None)?;
+                let cond_e = self.convert_expr(ctx.used(), *cond, Some(*ty))?;
+                let else_e = self.convert_expr(ctx.used(), *else_, Some(*ty))?;
+                let tmp_type = writable_type(self.convert_type(*ty)?);
+                let is_unsafe = cond_e.is_unsafe || else_e.is_unsafe;
                 let tmp = self.renamer.borrow_mut().fresh();
                 let tmp_var = DaExpr::Var(tmp.clone());
-                let tmp_type = writable_type(self.convert_type(*ty)?);
-                let then_assign = DaStmt::Expr(DaExpr::Assign(
-                    Box::new(tmp_var.clone()),
-                    Box::new(cond_e.val.clone()),
-                ));
-                let else_assign = DaStmt::Expr(DaExpr::Assign(
-                    Box::new(tmp_var.clone()),
-                    Box::new(else_e.val),
-                ));
-                let if_stmt = DaStmt::Expr(DaExpr::IfThenElse {
-                    cond: Box::new(cond_e.val.clone()),
-                    then: Box::new(DaExpr::Block(DaBlock {
-                        stmts: vec![then_assign],
-                    })),
-                    elifs: vec![],
-                    else_: Some(Box::new(DaExpr::Block(DaBlock {
-                        stmts: vec![else_assign],
-                    }))),
-                });
-                let var_decl = DaStmt::Var {
+                let mut c_stmts = cond_e.stmts;
+                c_stmts.push(DaStmt::Var {
                     name: tmp.clone(),
                     var_type: tmp_type.clone(),
-                    init: Some(zero_for_datype(&tmp_type)),
-                };
-                let mut c_stmts = cond_e.stmts;
-                c_stmts.extend(else_e.stmts);
-                c_stmts.push(var_decl);
-                c_stmts.push(if_stmt);
+                    init: Some(self.coerce_branch_value(cond_e.val, &tmp_type)),
+                });
+                let mut else_stmts = else_e.stmts;
+                else_stmts.push(DaStmt::Expr(DaExpr::Assign(
+                    Box::new(tmp_var.clone()),
+                    Box::new(self.coerce_branch_value(else_e.val, &tmp_type)),
+                )));
+                c_stmts.push(DaStmt::Expr(DaExpr::IfThenElse {
+                    cond: Box::new(mk().unary_op(
+                        "!",
+                        self.value_is_truthy(tmp_var.clone(), &tmp_type),
+                    )),
+                    then: Box::new(DaExpr::Block(DaBlock { stmts: else_stmts })),
+                    elifs: vec![],
+                    else_: None,
+                }));
                 Ok(WithStmts {
                     stmts: c_stmts,
                     val: tmp_var,
-                    is_unsafe: cond_e.is_unsafe || else_e.is_unsafe,
+                    is_unsafe,
                 })
             }
             // Bad expression — skip
@@ -1556,6 +1631,241 @@ impl<'c> Translation<'c> {
                 "expr kind not yet implemented in daScript translator (catch-all)",
             )),
         }
+    }
+
+    /// A C subscript index is a signed integer, and daScript indexes pointers
+    /// and fixed arrays with `int`/`int64`.
+    pub(crate) fn subscript_index_operand(&self, index: DaExpr) -> DaExpr {
+        match Self::infer_type(&index) {
+            Some(ty) if matches!(ty.kind, DaTypeKind::Int | DaTypeKind::Int64) => index,
+            Some(ty) if matches!(ty.kind, DaTypeKind::UInt64) => DaExpr::Cast {
+                kind: das_ast::CastKind::Cast,
+                expr: Box::new(index),
+                to: DaType::int64(),
+            },
+            _ => DaExpr::Cast {
+                kind: das_ast::CastKind::Cast,
+                expr: Box::new(index),
+                to: DaType::int(),
+            },
+        }
+    }
+
+    /// A C string literal used as an array initializer is array storage:
+    /// every code unit plus the NUL terminator, zero-padded to the declared
+    /// extent.
+    fn string_literal_array(
+        &self,
+        bytes: &[u8],
+        width: u8,
+        elem: CTypeId,
+        size: usize,
+    ) -> TranslationResult<DaExpr> {
+        if width != 1 {
+            return Err(TranslationError::generic(
+                "wide string array initializer is not implemented",
+            ));
+        }
+        let elem_da = writable_type(self.convert_type_raw(elem)?);
+        if bytes.len() >= size + 1 {
+            return Err(TranslationError::generic(
+                "C string initializer is longer than its array",
+            ));
+        }
+        let signed_elem = matches!(
+            elem_da.kind,
+            DaTypeKind::Int8 | DaTypeKind::Int16 | DaTypeKind::Int | DaTypeKind::Int64
+        );
+        let mut items = Vec::with_capacity(size);
+        for index in 0..size {
+            let byte = bytes.get(index).copied().unwrap_or(0);
+            let value = if signed_elem {
+                i64::from(byte as i8)
+            } else {
+                i64::from(byte)
+            };
+            items.push(
+                self.integer_literal_for_type(DaExpr::ConstInt(value), elem_da.clone()),
+            );
+        }
+        Ok(DaExpr::MakeFixedArray {
+            elem_type: elem_da,
+            items,
+        })
+    }
+
+    /// Lower a C conversion to `_Bool`.  C says the result is `x != 0`
+    /// (`x != null` for a pointer); daScript has no conversion to bool, so the
+    /// comparison is not an approximation but the definition.
+    fn convert_to_boolean(
+        &self,
+        ctx: ExprContext,
+        expr_id: CExprId,
+    ) -> TranslationResult<WithStmts<DaExpr>> {
+        if let Some(qty) = self.ast_context[expr_id].kind.get_qual_type() {
+            let kind = self.ast_context.resolve_type(qty.ctype).kind.clone();
+            if matches!(
+                kind,
+                CTypeKind::Float
+                    | CTypeKind::Double
+                    | CTypeKind::LongDouble
+                    | CTypeKind::Float128
+                    | CTypeKind::BFloat16
+            ) {
+                let value = self.convert_expr(ctx.used(), expr_id, Some(qty))?;
+                let da = writable_type(self.convert_type(qty)?);
+                return Ok(value.map(|v| DaExpr::Op2 {
+                    op: "!=",
+                    left: Box::new(v),
+                    right: Box::new(zero_for_datype(&da)),
+                }));
+            }
+        }
+        self.convert_condition(ctx, true, expr_id)
+    }
+
+    /// A daScript condition slot only accepts a boolean *expression*; a bare
+    /// `bool` value has to be spelled as one.
+    pub(crate) fn as_bool_condition(&self, value: DaExpr) -> DaExpr {
+        fn is_condition(expr: &DaExpr) -> bool {
+            match expr {
+                DaExpr::ConstBool(_) | DaExpr::Op1 { op: "!", .. } => true,
+                DaExpr::Op2 { op, .. } => matches!(
+                    *op,
+                    "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||"
+                ),
+                DaExpr::Unsafe(inner) => is_condition(inner),
+                _ => false,
+            }
+        }
+        if is_condition(&value) {
+            value
+        } else {
+            DaExpr::Op2 {
+                op: "==",
+                left: Box::new(value),
+                right: Box::new(DaExpr::ConstBool(true)),
+            }
+        }
+    }
+
+    /// `value != 0` for the daScript type a C value is stored in.
+    pub(crate) fn value_is_truthy(&self, value: DaExpr, ty: &DaType) -> DaExpr {
+        let zero = match ty.kind {
+            DaTypeKind::Pointer(_) => abi::null_pointer(ty),
+            DaTypeKind::Bool => return self.as_bool_condition(value),
+            _ => zero_for_datype(ty),
+        };
+        DaExpr::Op2 {
+            op: "!=",
+            left: Box::new(value),
+            right: Box::new(zero),
+        }
+    }
+
+    /// Make an arm value assignable to a temporary of `target`.
+    fn coerce_branch_value(&self, value: DaExpr, target: &DaType) -> DaExpr {
+        if matches!(target.kind, DaTypeKind::Pointer(_)) {
+            if matches!(value, DaExpr::ConstNull) {
+                return value;
+            }
+            return match Self::infer_type(&value) {
+                Some(ref inferred) if inferred == target => value,
+                _ => value,
+            };
+        }
+        if !target.is_numeric() || matches!(target.kind, DaTypeKind::Auto) {
+            return value;
+        }
+        match Self::infer_type(&value) {
+            Some(inferred) => {
+                if writable_type(inferred) == *target {
+                    value
+                } else {
+                    DaExpr::Cast {
+                        kind: das_ast::CastKind::Cast,
+                        expr: Box::new(value),
+                        to: target.clone(),
+                    }
+                }
+            }
+            None => value,
+        }
+    }
+
+    /// `var tmp : T = zero; if (cond) { then-stmts; tmp = a } else { … }`.
+    ///
+    /// This is the shape every C construct that evaluates one of two operands
+    /// lowers to, so the statements an operand hoisted stay guarded by the
+    /// condition that decides whether C evaluates it at all.
+    fn guarded_value_branches(
+        &self,
+        tmp_type: &DaType,
+        cond: DaExpr,
+        then_value: WithStmts<DaExpr>,
+        else_value: Option<WithStmts<DaExpr>>,
+    ) -> (DaExpr, Vec<DaStmt>) {
+        let tmp = self.renamer.borrow_mut().fresh();
+        let tmp_var = DaExpr::Var(tmp.clone());
+        let mut then_stmts = then_value.stmts;
+        then_stmts.push(DaStmt::Expr(DaExpr::Assign(
+            Box::new(tmp_var.clone()),
+            Box::new(then_value.val),
+        )));
+        let else_block = else_value.map(|else_value| {
+            let mut else_stmts = else_value.stmts;
+            else_stmts.push(DaStmt::Expr(DaExpr::Assign(
+                Box::new(tmp_var.clone()),
+                Box::new(else_value.val),
+            )));
+            Box::new(DaExpr::Block(DaBlock { stmts: else_stmts }))
+        });
+        let stmts = vec![
+            DaStmt::Var {
+                name: tmp,
+                var_type: tmp_type.clone(),
+                init: Some(zero_for_datype(tmp_type)),
+            },
+            DaStmt::Expr(DaExpr::IfThenElse {
+                cond: Box::new(cond),
+                then: Box::new(DaExpr::Block(DaBlock { stmts: then_stmts })),
+                elifs: vec![],
+                else_: else_block,
+            }),
+        ];
+        (tmp_var, stmts)
+    }
+
+    /// A C expression whose value is discarded still has to run.  Returns the
+    /// statement that keeps its side effects, or `None` when the daScript
+    /// expression provably has none (daScript rejects a pure expression
+    /// statement).
+    pub(crate) fn discard_value_stmt(&self, expr: DaExpr) -> Option<DaStmt> {
+        fn has_effect(expr: &DaExpr) -> bool {
+            match expr {
+                DaExpr::ConstInt(_)
+                | DaExpr::ConstUInt(_)
+                | DaExpr::ConstFloat(_)
+                | DaExpr::ConstDouble(_)
+                | DaExpr::ConstBool(_)
+                | DaExpr::ConstString(_)
+                | DaExpr::ConstNull
+                | DaExpr::Var(_) => false,
+                DaExpr::Field(base, _) | DaExpr::SafeField(base, _) => has_effect(base),
+                DaExpr::Index(base, idx) | DaExpr::SafeIndex(base, idx) => {
+                    has_effect(base) || has_effect(idx)
+                }
+                DaExpr::Op1 { expr, .. } => has_effect(expr),
+                DaExpr::Op2 { left, right, .. } => has_effect(left) || has_effect(right),
+                DaExpr::Cast { expr, .. }
+                | DaExpr::Unsafe(expr)
+                | DaExpr::Addr(expr)
+                | DaExpr::Deref(expr)
+                | DaExpr::DerefExplicit(expr) => has_effect(expr),
+                _ => true,
+            }
+        }
+        has_effect(&expr).then(|| DaStmt::Expr(expr))
     }
 
     fn collect_case_values(
@@ -1571,9 +1881,15 @@ impl<'c> Translation<'c> {
                 all.extend(rest_vals);
                 Ok((all, body))
             }
-            CStmtKind::Default(nested_sub) => {
-                // Default after case: case 1: default: { body }
-                Ok((vec![first_expr], *nested_sub))
+            CStmtKind::Default(_) => {
+                // `case 1: default: { body }` — the body is both a case arm and
+                // the default arm.  The if/elif chain this path builds has one
+                // `else`, so keeping only the case value would silently drop the
+                // default.
+                Err(TranslationError::generic(
+                    "unsupported switch shape in a statement expression: \
+                     a default label sharing a case label's body",
+                ))
             }
             _ => {
                 // Regular case with body: case 1: { body }
@@ -1582,8 +1898,40 @@ impl<'c> Translation<'c> {
         }
     }
 
+    /// True when control can run off the end of this C statement instead of
+    /// leaving it through `break`, `return`, `goto` or `continue`.
+    fn statement_falls_through(&self, stmt_id: CStmtId) -> bool {
+        match &self.ast_context[stmt_id].kind {
+            CStmtKind::Break
+            | CStmtKind::Continue
+            | CStmtKind::Return(_)
+            | CStmtKind::Goto(_) => false,
+            CStmtKind::Compound(ref stmts) => stmts
+                .last()
+                .map_or(true, |&last| self.statement_falls_through(last)),
+            CStmtKind::If {
+                true_variant,
+                false_variant: Some(false_variant),
+                ..
+            } => {
+                self.statement_falls_through(*true_variant)
+                    || self.statement_falls_through(*false_variant)
+            }
+            CStmtKind::Label(sub) | CStmtKind::Case(_, sub, _) | CStmtKind::Default(sub) => {
+                self.statement_falls_through(*sub)
+            }
+            _ => true,
+        }
+    }
+
     /// Walk a switch body compound statement, extracting Case/Default branches.
     /// Returns (cases, is_unsafe).
+    ///
+    /// This is the statement-expression path only; a `switch` in a function body
+    /// goes through the CFG, which models dispatch and fall-through exactly.
+    /// Here the switch becomes an if/elif chain, which cannot express C's
+    /// fall-through, so anything that would need it is rejected rather than
+    /// silently translated into a different program.
     fn collect_switch_cases(&self, body_id: CStmtId) -> TranslationResult<(Vec<SwitchCase>, bool)> {
         // First pass: collect raw cases with their values and body substatements
         struct RawCase {
@@ -1609,7 +1957,15 @@ impl<'c> Translation<'c> {
                                 body_sub: *sub_stmt,
                             });
                         }
-                        _ => continue,
+                        // C allows statements before the first `case`; they are
+                        // unreachable but a Duff's-device body puts real code
+                        // here too. Neither survives an if/elif chain.
+                        _ => {
+                            return Err(TranslationError::generic(
+                                "unsupported switch shape in a statement expression: \
+                                 a statement outside every case label",
+                            ))
+                        }
                     }
                 }
             }
@@ -1634,7 +1990,19 @@ impl<'c> Translation<'c> {
         let mut pending_values: Vec<DaExpr> = vec![];
         let mut is_unsafe = false;
 
-        for rc in &raw {
+        let last_index = raw.len().saturating_sub(1);
+        for (index, rc) in raw.iter().enumerate() {
+            // Only the final arm may run off the end of the switch; anywhere
+            // else that is C fall-through into the next case.
+            if index != last_index
+                && !matches!(self.ast_context[rc.body_sub].kind, CStmtKind::Empty)
+                && self.statement_falls_through(rc.body_sub)
+            {
+                return Err(TranslationError::generic(
+                    "unsupported switch shape in a statement expression: \
+                     a case falls through into the next one",
+                ));
+            }
             // Convert values
             let mut vals: Vec<DaExpr> = vec![];
             for &ev in &rc.values {
@@ -1656,7 +2024,10 @@ impl<'c> Translation<'c> {
             let body_unsafe = self.collect_case_body(rc.body_sub, &mut body_stmts)?;
             is_unsafe |= body_unsafe;
 
-            if body_stmts.is_empty() && !vals.is_empty() {
+            // `case 1: ;` shares the next arm's body. An arm whose statements
+            // merely lowered to nothing (`case 1: break;`) does not — merging on
+            // emptiness used to give it the following arm's body.
+            if matches!(self.ast_context[rc.body_sub].kind, CStmtKind::Empty) && !vals.is_empty() {
                 pending_values.extend(vals);
             } else {
                 let mut merged_vals = std::mem::take(&mut pending_values);
@@ -1945,6 +2316,18 @@ impl<'c> Translation<'c> {
                 right: Box::new(zero_for_ctype_kind(&ty.kind)),
             }));
         }
+        if ty.kind.is_floating_type() {
+            // A floating condition is compared against a floating zero in its
+            // own type. Routing it through an integer comparison would make
+            // every value with magnitude below one — `0.5`, `-0.5` — test as
+            // false.
+            let zero = literals::floating_zero_for_datype(&self.convert_type(qty)?);
+            return Ok(val.map(|v| DaExpr::Op2 {
+                op: "!=",
+                left: Box::new(v),
+                right: Box::new(zero),
+            }));
+        }
         if let Some(inferred) = Self::infer_type(&val.val) {
             if inferred.is_numeric() && !matches!(inferred.kind, DaTypeKind::Bool) {
                 return Ok(val.map(|v| DaExpr::Op2 {
@@ -2005,6 +2388,12 @@ impl<'c> Translation<'c> {
 
     pub fn null_for_type(&self, ty: CQualTypeId) -> TranslationResult<DaExpr> {
         let da_type = self.convert_type(ty)?;
+        // A daScript `function<…>` does not accept `null`; its null value is
+        // spelled `default<T>` (and compares equal to `null`).  The check uses
+        // the C type because a typedef can hide the function type behind a name.
+        if self.is_callable_type(ty.ctype) {
+            return Ok(DaExpr::DefaultValue(da_type));
+        }
         if matches!(da_type.kind, DaTypeKind::UInt64) {
             Ok(DaExpr::Cast {
                 kind: das_ast::CastKind::Cast,
@@ -2043,6 +2432,60 @@ impl<'c> Translation<'c> {
         decl_id: CDeclId,
     ) -> TranslationResult<crate::cfg::DeclStmtInfo> {
         match self.ast_context[decl_id].kind {
+            // A function-scope `static` is not a local at all: it has the
+            // lifetime of the program and is initialised exactly once, before
+            // `main` (C 6.2.4p3, 6.7.9p4 — its initialiser is a constant
+            // expression, and it is zero-initialised without one).  Emitting it
+            // as a `var` inside the body reset it on every call.  Hoist it to a
+            // module-level variable under a name mangled with the owning
+            // function, so two functions that both declare `static int count`
+            // still get two distinct objects.
+            CDeclKind::Variable {
+                has_static_duration: true,
+                has_thread_duration: false,
+                ref ident,
+                initializer,
+                typ,
+                ..
+            } => {
+                let mangled = format!("{}__{}", self.function_context.borrow().get_name(), ident);
+                let name = self.declare_value_name(decl_id, &mangled);
+                let var_type = self.convert_type(typ)?;
+                let init = match initializer {
+                    Some(expr_id) => {
+                        let init_ws = self.convert_expr(
+                            ExprContext {
+                                used: true,
+                                is_const: true,
+                                ..Default::default()
+                            },
+                            expr_id,
+                            Some(typ),
+                        )?;
+                        if !init_ws.stmts.is_empty() {
+                            return Err(TranslationError::generic(
+                                "static local initializer is not a constant expression",
+                            ));
+                        }
+                        crate::translator::functions::normalize_array_initializer_for_type(
+                            init_ws.val,
+                            &var_type,
+                        )
+                    }
+                    None => self.default_initializer_for_ctype(typ.ctype)?,
+                };
+                self.hoisted_statics
+                    .borrow_mut()
+                    .push(DaDecl::Variable(DaVariable {
+                        name,
+                        var_type,
+                        init: Some(init),
+                        annotations: vec![],
+                    }));
+                // Nothing is emitted in the function body: the declaration site
+                // carries no runtime effect any more.
+                Ok(crate::cfg::DeclStmtInfo::empty())
+            }
             CDeclKind::Variable {
                 has_static_duration: false,
                 has_thread_duration: false,
@@ -2296,26 +2739,35 @@ struct SwitchCase {
     stmts: Vec<DaStmt>,
 }
 
-/// Map CTypeKind → DaType (fallback for typedef resolution).
-fn type_kind_to_datype(kind: &CTypeKind) -> DaType {
+/// Map CTypeKind → the daScript *storage* type of a scalar C type.
+///
+/// This must agree with `Translation::convert_type_inner`; it exists only for
+/// the callers that hold a resolved `CTypeKind` and no `CQualTypeId`.  It
+/// deliberately answers `None` for every type whose daScript spelling needs
+/// the surrounding context (pointers, records, arrays) so that no caller can
+/// mistake two different pointer types for one another.
+fn scalar_type_kind_to_datype(kind: &CTypeKind) -> Option<DaType> {
     use CTypeKind::*;
-    match kind {
+    Some(match kind {
         Void => DaType::void(),
         Bool => DaType::bool(),
-        Int | Short | UShort | Int128 | Int32 => DaType::int(),
+        Int | Int32 => DaType::int(),
         SChar | Char | Int8 => DaType::int8(),
-        Int16 => DaType::int16(),
+        Short | Int16 => DaType::int16(),
         Int64 | Long | LongLong => DaType::int64(),
         IntPtr | SSize | PtrDiff | IntMax => DaType::int64(),
         UChar | UInt8 => DaType::uint8(),
-        UInt16 => DaType::uint16(),
-        UInt | UInt128 | UInt32 => DaType::uint(),
+        UShort | UInt16 => DaType::uint16(),
+        UInt | UInt32 => DaType::uint(),
         UInt64 | ULong | ULongLong | UIntPtr | Size | WChar => DaType::uint64(),
         Float | BFloat16 => DaType::float(),
-        Double | LongDouble | Float128 => DaType::double(),
-        Pointer(_) => DaType::uint64(),
-        _ => DaType::auto(),
-    }
+        Double => DaType::double(),
+        _ => return None,
+    })
+}
+
+fn type_kind_to_datype(kind: &CTypeKind) -> DaType {
+    scalar_type_kind_to_datype(kind).unwrap_or_else(DaType::auto)
 }
 
 fn writable_type(mut ty: DaType) -> DaType {
@@ -2326,15 +2778,31 @@ fn writable_type(mut ty: DaType) -> DaType {
 }
 
 fn zero_for_datype(ty: &DaType) -> DaExpr {
+    // A daScript function value has no numeric representation to reinterpret.
+    if crate::convert_type::is_function_value_type(ty) {
+        return DaExpr::DefaultValue(ty.clone());
+    }
     match &ty.kind {
         DaTypeKind::Pointer(_) => abi::null_pointer(ty),
+        // daScript has no `bool(0)`; C's zero `_Bool` is `false`.
+        DaTypeKind::Bool => DaExpr::ConstBool(false),
+        // A floating zero is not an integer zero: `x != 0.0` must stay a
+        // floating comparison rather than becoming an integer truncation.
+        DaTypeKind::Float => DaExpr::ConstFloat(0.0),
+        DaTypeKind::Double => DaExpr::ConstDouble(0.0),
         // A declaration may need a temporary default before CFG emits its C
         // initializer assignment. Arrays are aggregates, never numeric zero.
         // `[]` is typed by the declaration and remains distinct from the C
         // InitList assignment that follows.
         DaTypeKind::Array(_) => DaExpr::MakeArray(vec![]),
-        DaTypeKind::FixedArray(elem_ty, size) => {
-            DaExpr::MakeArray((0..*size).map(|_| zero_for_datype(elem_ty)).collect())
+        DaTypeKind::FixedArray(elem_ty, size) => DaExpr::MakeFixedArray {
+            elem_type: elem_ty.as_ref().clone(),
+            items: (0..*size).map(|_| zero_for_datype(elem_ty)).collect(),
+        },
+        // A named non-numeric type is a struct/union wrapper: `Name()` is its
+        // daScript default value, `cast<Name>(0)` is not a conversion at all.
+        DaTypeKind::Named(name) if !ty.is_numeric() => {
+            DaExpr::Call(Box::new(DaExpr::Var(name.clone())), vec![])
         }
         _ => DaExpr::Cast {
             kind: das_ast::CastKind::Cast,
@@ -2649,6 +3117,27 @@ fn c2da_minmax_helper(name: &str, ty: DaType, op: &'static str) -> DaDecl {
     })
 }
 
+/// True when a failed type declaration carries no daScript declaration of its
+/// own by construction, rather than because its C type cannot be lowered.
+///
+/// These are the four bookkeeping skips the two-pass export performs: a
+/// typedef Clang synthesised, an anonymous record or enum whose declaration is
+/// emitted through its typedef, and a `typedef struct Foo Foo` whose struct
+/// declaration already introduced the name. Every other failure means a user
+/// type has no daScript representation and must fail a strict translation.
+fn is_benign_type_skip(error: &TranslationError) -> bool {
+    let cause = error.to_string();
+    [
+        "skipping implicit typedef",
+        "anonymous struct (will be handled by typedef)",
+        "anonymous enum",
+        "redundant self-typedef, skipping",
+        "typedef target has no daScript representation; reported at each use",
+    ]
+    .iter()
+    .any(|benign| cause.contains(benign))
+}
+
 fn zero_for_ctype_kind(kind: &CTypeKind) -> DaExpr {
     if kind.is_unsigned_integral_type() {
         DaExpr::ConstUInt(0)
@@ -2751,24 +3240,10 @@ fn convert_binop(op: CBinOp) -> Result<&'static str, &'static str> {
     }
 }
 
-/// Main entry point: creates a Translation and produces a daScript module string.
-pub fn translate(
-    ast_context: TypedAstContext,
-    tcfg: &TranspilerConfig,
-    main_file: &Path,
-) -> (
-    String,
-    Option<()>,
-    Vec<(&'static str, Vec<&'static str>)>,
-    IndexSet<ExternCrate>,
-) {
-    translate_impl(ast_context, tcfg, main_file, false)
-        .expect("lossy translation must retain its historical error policy")
-}
-
-/// Strict translation boundary for fixtures and canonical execution. Unlike
-/// [`translate`], a failed top-level C declaration is an error rather than an
-/// omitted daScript declaration.
+/// Main entry point: creates a `Translation` and produces a daScript module
+/// string. A top-level C declaration that cannot be lowered is an error, never
+/// an omitted daScript declaration — there is no lossy alternative that would
+/// print a partial module instead.
 pub fn translate_checked(
     ast_context: TypedAstContext,
     tcfg: &TranspilerConfig,
@@ -2794,6 +3269,12 @@ fn translate_impl(
     IndexSet<ExternCrate>,
 )> {
     let mut t = Translation::new(ast_context, tcfg, main_file);
+
+    // Per-translation-unit arenas: the string-literal backing arrays and the
+    // builtin prelude helpers are collected while lowering and drained into
+    // the module below.
+    literals::reset_string_literals();
+    builtins::reset_builtin_helpers();
 
     // Prune unreachable system declarations (removes __-prefixed noise from system headers)
     t.ast_context.prune_unwanted_decls(false);
@@ -2892,6 +3373,30 @@ fn translate_impl(
                         .get_name()
                         .cloned()
                         .unwrap_or_else(|| "?".to_string());
+                    // A type declaration that carries no daScript declaration
+                    // of its own — a typedef the struct already defines, an
+                    // anonymous record reached through its typedef — is an
+                    // implementation detail of this lowering, not an
+                    // unsupported user program, so it stays a skip even under
+                    // strict translation.
+                    if strict_top_level && !is_benign_type_skip(&e) {
+                        let c_type = match &decl.kind {
+                            Typedef { typ, .. } => {
+                                format!("{:?}", t.ast_context.resolve_type(typ.ctype).kind)
+                            }
+                            Struct { .. } => "struct".to_string(),
+                            Union { .. } => "union".to_string(),
+                            Enum { .. } => "enum".to_string(),
+                            _ => "type declaration".to_string(),
+                        };
+                        return Err(format_translation_err!(
+                            t.ast_context.display_loc(&decl.loc),
+                            "operation=type declaration lowering; c_type={}; declaration={}; cause={}",
+                            c_type,
+                            name,
+                            e
+                        ));
+                    }
                     warn!("Skipping type decl {}: {}", name, e);
                 }
             }
@@ -2963,26 +3468,40 @@ fn translate_impl(
             if !exported_names.insert(var_name.clone()) {
                 continue;
             }
-            // Use value type to determine var type: ConstUInt → uint, ConstInt → int
+            // C gives an enumeration constant the enumeration's own integer
+            // type: a value above INT_MAX is `unsigned int`, never a negative
+            // `int`.
             let (das_val, das_type) = match value {
                 crate::c_ast::ConstIntExpr::U(v) => {
-                    let val = DaExpr::ConstUInt(*v);
-                    // If value > INT32_MAX, cast to int to match C enum semantics
-                    if *v > 0x7FFFFFFF {
-                        let int_type = DaType::int();
-                        (
-                            DaExpr::Cast {
-                                kind: das_ast::CastKind::Cast,
-                                expr: Box::new(val),
-                                to: int_type.clone(),
-                            },
-                            int_type,
-                        )
+                    let ty = if *v > u64::from(u32::MAX) {
+                        DaType::uint64()
                     } else {
-                        (val, DaType::uint())
-                    }
+                        DaType::uint()
+                    };
+                    (
+                        DaExpr::Cast {
+                            kind: das_ast::CastKind::Cast,
+                            expr: Box::new(DaExpr::ConstUInt(*v)),
+                            to: ty.clone(),
+                        },
+                        ty,
+                    )
                 }
-                crate::c_ast::ConstIntExpr::I(v) => (DaExpr::ConstInt(*v), DaType::int()),
+                crate::c_ast::ConstIntExpr::I(v) => {
+                    let ty = if *v > i64::from(i32::MAX) || *v < i64::from(i32::MIN) {
+                        DaType::int64()
+                    } else {
+                        DaType::int()
+                    };
+                    (
+                        DaExpr::Cast {
+                            kind: das_ast::CastKind::Cast,
+                            expr: Box::new(DaExpr::ConstInt(*v)),
+                            to: ty.clone(),
+                        },
+                        ty,
+                    )
+                }
             };
             enum_const_decls.push(DaDecl::Variable(DaVariable {
                 name: var_name,
@@ -2994,6 +3513,14 @@ fn translate_impl(
     }
     decls.extend(enum_const_decls);
     let mut module_decls = c2da_runtime_helpers();
+    // Function-scope `static` storage lowered while pass 2 walked the bodies.
+    // It must precede the functions that read it, and it is initialised once.
+    module_decls.extend(t.take_hoisted_statics());
+    // A C string literal has static storage duration; its backing byte array
+    // is a module-level object, declared before any function that takes its
+    // address.
+    module_decls.extend(literals::take_string_literal_declarations());
+    module_decls.extend(builtins::take_builtin_helper_declarations());
     module_decls.extend(decls);
 
     // Build the daScript module

@@ -13,7 +13,7 @@ use c2dascript_transpile::TranspilerConfig;
 use c2rust_rust_tools::sanitize_file_name;
 use itertools::Itertools;
 
-fn config() -> TranspilerConfig {
+fn config(output_dir: &Path) -> TranspilerConfig {
     TranspilerConfig {
         dump_untyped_context: false,
         dump_typed_context: false,
@@ -23,14 +23,19 @@ fn config() -> TranspilerConfig {
         filter: None,
         translate_valist: true,
         overwrite_existing: true,
-        output_dir: None,
+        // Never write next to the checked-in fixture: the snapshot is the
+        // only artefact of this test, the source tree must stay clean.
+        output_dir: Some(output_dir.to_owned()),
         log_level: log::LevelFilter::Warn,
         edition: c2rust_rust_tools::RustEdition::Edition2021,
     }
 }
 
-/// Validate that the given C file compiles, then transpile it with the test config.
-fn compile_and_transpile_file(c_path: &Path) {
+/// Validate that the given C file compiles, then translate it with the strict
+/// API into `output_dir`. Returns the generated daScript text, or the
+/// translation diagnostic when the input is (intentionally) unsupported, so
+/// that the diagnostic itself becomes the snapshot.
+fn compile_and_transpile_file(c_path: &Path, output_dir: &Path) -> String {
     let status = std::process::Command::new("clang")
         .args([
             "-c",
@@ -48,7 +53,18 @@ fn compile_and_transpile_file(c_path: &Path) {
 
     let (_temp_dir, temp_path) =
         c2dascript_transpile::create_temp_compile_commands(&[c_path.to_owned()]);
-    c2dascript_transpile::transpile(config(), &temp_path, &["-w"]);
+    match c2dascript_transpile::transpile_checked(config(output_dir), &temp_path, &["-w"]) {
+        Ok(outputs) => {
+            let das_path = outputs
+                .into_iter()
+                .next()
+                .expect("strict translation reported success without an output path");
+            fs::read_to_string(&das_path).unwrap_or_else(|error| {
+                panic!("cannot read generated {}: {error}", das_path.display())
+            })
+        }
+        Err(error) => format!("TRANSLATION FAILED\n{error}\n"),
+    }
 }
 
 /// Transpile one input and compare output against the corresponding snapshot.
@@ -59,20 +75,16 @@ fn transpile_snapshot(platform: &[&str], c_path: &Path) {
     let c_file_name = c_path.file_name().unwrap().to_str().unwrap();
     let c_file_name = sanitize_file_name(c_file_name);
 
-    compile_and_transpile_file(c_path);
+    let output_dir = tempfile::tempdir().expect("temporary snapshot output directory");
+    let das = compile_and_transpile_file(c_path, output_dir.path());
 
     let cwd = current_dir().unwrap();
-    let das_path = c_path.with_extension("das");
-    let das = fs::read_to_string(&das_path).unwrap_or_else(|_| {
-        panic!(
-            "transpile did not produce expected daScript output {}",
-            das_path.display()
-        )
-    });
-    let debug_expr = format!("cat {}", das_path.display());
+    let debug_expr = format!("transpile --strict {}", c_path.display());
 
     // Replace real paths with placeholders for reproducible snapshots.
-    let das = das.replace(cwd.to_str().unwrap(), ".");
+    let das = das
+        .replace(output_dir.path().to_str().unwrap(), "<out>")
+        .replace(cwd.to_str().unwrap(), ".");
 
     let suffix = platform.iter().copied().filter(|s| !s.is_empty()).join(".");
     let snapshot_name = if suffix.is_empty() {
@@ -221,7 +233,13 @@ fn generate_keywords_test() {
         .map(|name| format!("void {name}(void) {{}}"))
         .join("\n\n");
     c_code.push('\n');
-    fs_err::write("tests/snapshots/keywords.c", c_code).unwrap();
+    // The fixture is derived from the renamer's keyword list; keep it in sync
+    // but only rewrite it when the content actually changed, so an unchanged
+    // run leaves the working tree untouched.
+    let path = "tests/snapshots/keywords.c";
+    if fs::read_to_string(path).ok().as_deref() != Some(c_code.as_str()) {
+        fs_err::write(path, c_code).unwrap();
+    }
 }
 
 // NOTE: Tests should be listed in alphabetical order.

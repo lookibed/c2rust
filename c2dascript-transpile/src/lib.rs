@@ -28,14 +28,13 @@ use c2rust_ast_exporter as ast_exporter;
 use crate::compile_cmds::get_compile_commands;
 use std::prelude::v1::Vec;
 
-/// Failure produced by the strict, fixture-facing translation API.
+/// Failure produced by the translation API.
 ///
-/// The historical [`transpile`] entrypoint is deliberately lossy for
-/// compatibility with the inherited c2rust command-line workflow: it logs a
-/// failed translation unit and continues with the rest of the compilation
-/// database. Tests and canonical runners must use [`transpile_checked`]
-/// instead, so an unsupported C construct can never be mistaken for a
-/// successfully printed partial module.
+/// [`transpile`] continues past a failed translation unit so the rest of a
+/// compilation database is still processed, while [`transpile_checked`] stops
+/// at the first one; both report every failure, and neither writes an output
+/// file for a unit that failed. An unsupported C construct can therefore never
+/// be mistaken for a successfully printed partial module.
 #[derive(Debug)]
 pub enum TranspileError {
     CompileCommands(String),
@@ -193,28 +192,45 @@ pub fn create_temp_compile_commands(sources: &[PathBuf]) -> (TempDir, PathBuf) {
     (temp_dir, temp_path)
 }
 
-pub fn transpile(tcfg: TranspilerConfig, cc_db: &Path, extra_clang_args: &[&str]) {
+/// Translate every selected command, continuing past a failed translation unit
+/// so the rest of a compilation database is still processed, and report every
+/// failure to the caller.
+///
+/// This is the permissive counterpart of [`transpile_checked`]: it differs only
+/// in *when* it stops, never in what it accepts. A translation unit that cannot
+/// be lowered produces no output file and is returned here as an error, so a
+/// caller can never mistake a skipped unit for a successful one.
+pub fn transpile(
+    tcfg: TranspilerConfig,
+    cc_db: &Path,
+    extra_clang_args: &[&str],
+) -> Result<Vec<PathBuf>, Vec<TranspileError>> {
     diagnostics::init(HashSet::new(), tcfg.log_level);
 
     let lcmds = match get_compile_commands(cc_db, &tcfg.filter) {
         Ok(l) => l,
         Err(e) => {
-            warn!(
-                "Could not parse compile commands from {}: {}",
-                cc_db.to_string_lossy(),
-                e
-            );
-            return;
+            return Err(vec![TranspileError::CompileCommands(e.to_string())]);
         }
     };
 
+    let mut outputs = Vec::new();
+    let mut failures = Vec::new();
     for lcmd in &lcmds {
-        let cmds = &lcmd.cmd_inputs;
-        for cmd in cmds {
-            if let Err(_) = transpile_single(&tcfg, &cmd.abs_file(), cc_db, extra_clang_args) {
-                warn!("Failed to transpile {}", cmd.abs_file().display());
+        for cmd in &lcmd.cmd_inputs {
+            match transpile_single_checked(&tcfg, &cmd.abs_file(), cc_db, extra_clang_args) {
+                Ok(path) => outputs.push(path),
+                Err(error) => {
+                    warn!("Failed to transpile {}", cmd.abs_file().display());
+                    failures.push(error);
+                }
             }
         }
+    }
+    if failures.is_empty() {
+        Ok(outputs)
+    } else {
+        Err(failures)
     }
 }
 
@@ -242,17 +258,6 @@ pub fn transpile_checked(
         }
     }
     Ok(outputs)
-}
-
-fn transpile_single(
-    tcfg: &TranspilerConfig,
-    input_path: &Path,
-    cc_db: &Path,
-    extra_clang_args: &[&str],
-) -> Result<PathBuf, ()> {
-    transpile_single_checked(tcfg, input_path, cc_db, extra_clang_args).map_err(|error| {
-        warn!("{error}");
-    })
 }
 
 fn output_path_for(tcfg: &TranspilerConfig, input_path: &Path) -> Result<PathBuf, TranspileError> {

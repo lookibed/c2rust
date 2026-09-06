@@ -56,10 +56,38 @@ impl<'c> Translation<'c> {
             }
             for &fid in ids {
                 if let CDeclKind::Field { ref name, typ, .. } = self.ast_context[fid].kind {
-                    let mut ft = self.convert_type(typ.clone()).unwrap_or(DaType::auto());
-                    if matches!(ft.kind, DaTypeKind::Auto) {
-                        ft = DaType::int64();
-                    }
+                    // A field type that has no daScript representation is a
+                    // gap in the translation, not something to approximate:
+                    // substituting `int64`/`auto` would silently change the
+                    // record's layout and the meaning of every access to it.
+                    let ft = self
+                        .convert_type(typ.clone())
+                        .and_then(|ft| {
+                            // A typedef does not make an unrepresentable C
+                            // type representable. A record field needs a type
+                            // daScript can actually lay out, so the whole
+                            // typedef chain is resolved before the field is
+                            // accepted.
+                            let mut underlying = typ.clone();
+                            underlying.ctype = self.ast_context.resolve_type_id(typ.ctype);
+                            self.convert_type(underlying)?;
+                            Ok(ft)
+                        })
+                        .map_err(|error| {
+                            let kind = self
+                                .ast_context
+                                .resolve_type(self.ast_context.resolve_type_id(typ.ctype))
+                                .kind
+                                .clone();
+                            format_translation_err!(
+                                self.ast_context.display_loc(&self.ast_context[fid].loc),
+                                "unsupported {} field type {:?} in field {}: {}",
+                                unrepresentable_field_kind(&kind),
+                                kind,
+                                name,
+                                error
+                            )
+                        })?;
                     let field_name = self
                         .type_converter
                         .borrow()
@@ -84,10 +112,6 @@ impl<'c> Translation<'c> {
             fields: das_fields,
             annotations: vec![],
         }))
-    }
-
-    pub fn convert_type_alias(&self, name: &str, _typ: CTypeId) -> TranslationResult<DaDecl> {
-        Err(TranslationError::generic("type alias not yet implemented"))
     }
 
     pub fn convert_union(
@@ -221,14 +245,6 @@ impl<'c> Translation<'c> {
         Ok(out)
     }
 
-    pub fn convert_struct_zero_initializer(
-        &self,
-        _ctx: ExprContext,
-        _decl_id: CRecordId,
-    ) -> TranslationResult<WithStmts<DaExpr>> {
-        Ok(WithStmts::new_val(DaExpr::ConstNull))
-    }
-
     fn union_wrapper_name(&self, union_id: CRecordId) -> TranslationResult<String> {
         let raw = match &self.ast_context[union_id].kind {
             CDeclKind::Union {
@@ -335,18 +351,14 @@ impl<'c> Translation<'c> {
                 .unwrap_or_else(|| name.clone()),
             _ => return Err(TranslationError::generic("Member access to non-field")),
         };
+        let _ = override_ty;
+        // A member access is an assignment target. Wrapping it in a cast to
+        // the use-site's type would turn the lvalue into a value, so any
+        // numeric conversion is left to the consuming value-site lowering.
         let das = DaExpr::Field(Box::new(obj.val), fn_);
-        if let Some(ty) = override_ty {
-            let t = self.convert_type(ty)?;
-            Ok(WithStmts::new_val(DaExpr::Cast {
-                kind: das_ast::CastKind::Cast,
-                expr: Box::new(das),
-                to: t,
-            })
+        Ok(WithStmts::new_val(das)
+            .prepend_stmts(obj.stmts)
             .merge_unsafe(obj.is_unsafe))
-        } else {
-            Ok(WithStmts::new_val(das).merge_unsafe(obj.is_unsafe))
-        }
     }
 
     pub fn convert_cast_to_union(
@@ -380,72 +392,17 @@ impl<'c> Translation<'c> {
         Ok(WithStmts::new(stmts, DaExpr::Var(tmp)).merge_unsafe(val.is_unsafe || stored.is_unsafe))
     }
 
-    /// Field layout with padding/bitfield grouping (c2rust get_field_types).
-    fn get_field_types(
-        &self,
-        _record_id: CRecordId,
-        field_ids: &[CDeclId],
-        _platform_byte_size: u64,
-    ) -> TranslationResult<Vec<FieldType>> {
-        let mut out = vec![];
-        for &fid in field_ids {
-            if let CDeclKind::Field {
-                ref name,
-                typ,
-                bitfield_width: None,
-                ..
-            } = self.ast_context[fid].kind
-            {
-                let ft = self
-                    .convert_type(CQualTypeId::new(typ.ctype))
-                    .unwrap_or_else(|_| DaType::int64());
-                out.push(FieldType::Regular {
-                    name: name.clone(),
-                    ctype: typ.ctype,
-                    field: fid,
-                    use_inner_type: false,
-                    is_va_list: false,
-                });
-            }
-        }
-        Ok(out)
-    }
-
-    pub fn convert_bitfield_assignment_op_with_rhs(
-        &self,
-        ctx: ExprContext,
-        _op: CBinOp,
-        lhs: CExprId,
-        _rhs_expr: DaExpr,
-        _field_id: CDeclId,
-    ) -> TranslationResult<WithStmts<DaExpr>> {
-        self.convert_expr(ctx, lhs, None)
-    }
 }
 
-#[derive(Debug)]
-enum FieldType {
-    BitfieldGroup {
-        start_bit: u64,
-        field_name: String,
-        bytes: u64,
-        attrs: Vec<(String, DaType, String)>,
-    },
-    Padding {
-        bytes: u64,
-    },
-    ComputedPadding {
-        ident: String,
-    },
-    Regular {
-        name: String,
-        ctype: CTypeId,
-        field: CFieldId,
-        use_inner_type: bool,
-        is_va_list: bool,
-    },
-}
-
-fn contains_block(_expr: &DaExpr) -> bool {
-    false
+/// Names the family a record field's C type belongs to, so a failed field
+/// lowering reports which C surface has no daScript representation rather than
+/// only that one exists.
+fn unrepresentable_field_kind(kind: &CTypeKind) -> &'static str {
+    match kind {
+        CTypeKind::Vector(_, _) | CTypeKind::UnhandledSveType => "vector",
+        CTypeKind::Atomic(_) => "atomic",
+        CTypeKind::Complex(_) => "complex",
+        CTypeKind::Function(..) => "function",
+        _ => "record",
+    }
 }

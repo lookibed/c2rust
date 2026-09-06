@@ -9,7 +9,7 @@ export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
 
 bash "$fixture/check_c_graph.sh"
 
-LLVM_CONFIG_PATH=/usr/bin/llvm-config-18 cargo run -q -p c2dascript-transpile -- \
+cargo run -q -p c2dascript-transpile -- \
     --file "$src/all.c" \
     -DPLM_NO_STDIO \
     -I"$fixture/include" \

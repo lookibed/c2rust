@@ -32,6 +32,34 @@ def run(command: list[str], *, cwd: Path, env: dict[str, str], label: str) -> su
     return result
 
 
+def find_daslang() -> Path:
+    """Locate the daslang binary without assuming any machine-specific layout.
+
+    Order: $DASLANG (binary), $DASROOT/bin/daslang, $DASROOT/build/daslang,
+    the pinned toolchain at <repo>/tmp/daslang-toolchain/bin/daslang (the one the
+    Claude Code MCP/LSP servers use), `daslang` on PATH, then ~/daScript/{bin,build}/daslang.
+    """
+    candidates: list[Path] = []
+    if os.environ.get("DASLANG"):
+        candidates.append(Path(os.environ["DASLANG"]))
+    if os.environ.get("DASROOT"):
+        root = Path(os.environ["DASROOT"])
+        candidates += [root / "bin/daslang", root / "build/daslang"]
+    candidates.append(Path(__file__).resolve().parent.parent / "tmp/daslang-toolchain/bin/daslang")
+    on_path = shutil.which("daslang")
+    if on_path:
+        candidates.append(Path(on_path))
+    home = Path.home() / "daScript"
+    candidates += [home / "bin/daslang", home / "build/daslang"]
+    for candidate in candidates:
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    raise CaseFailure(
+        "daslang not found; set DASLANG=/path/to/daslang or DASROOT=/path/to/daScript, "
+        "or put daslang on PATH (tried: " + ", ".join(map(str, candidates)) + ")"
+    )
+
+
 def load_cases() -> list[dict[str, Any]]:
     document = json.loads(CASE_FILE.read_text(encoding="utf-8"))
     if document.get("schema_version") != 1 or not isinstance(document.get("cases"), list):
@@ -127,7 +155,41 @@ def run_rust_assertion(case: dict[str, Any], env: dict[str, str]) -> None:
     )
 
 
-def execute(case: dict[str, Any], dasroot: Path, keep: bool) -> None:
+def run_negative_translation(case: dict[str, Any], c_input: Path, env: dict[str, str]) -> None:
+    """Prove a negative case directly: strict translation must fail with the
+    declared diagnostic and must not write any output file."""
+    expected = case.get("expected_error")
+    if not isinstance(expected, dict) or not isinstance(expected.get("cause"), str):
+        raise CaseFailure(f"{case['id']}: negative case needs expected_error.cause or a rust_assertion")
+    work = Path(tempfile.mkdtemp(prefix=f"c2das-negative-{case['id']}-"))
+    try:
+        generated_dir = work / "generated"
+        flags = copied_flags(case["clang"].get("flags", []), c_input.parent)
+        result = subprocess.run(
+            [
+                "cargo", "run", "-q", "-p", "c2dascript-transpile", "--",
+                "--strict", "--output-dir", str(generated_dir), "--file", str(c_input), *flags,
+            ],
+            cwd=ROOT, env=env, text=True, capture_output=True,
+        )
+        if result.returncode == 0:
+            raise CaseFailure(f"{case['id']}: strict translation unexpectedly succeeded\nstderr:\n{result.stderr}")
+        if expected["cause"] not in result.stderr:
+            raise CaseFailure(
+                f"{case['id']}: diagnostic does not mention the declared cause\n"
+                f"expected cause: {expected['cause']!r}\nstderr:\n{result.stderr}"
+            )
+        location = expected.get("location")
+        if isinstance(location, str) and location not in result.stderr:
+            raise CaseFailure(f"{case['id']}: diagnostic does not name {location!r}\nstderr:\n{result.stderr}")
+        written = list(generated_dir.glob("*.das")) if generated_dir.exists() else []
+        if written:
+            raise CaseFailure(f"{case['id']}: failed translation still wrote {written}")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def execute(case: dict[str, Any], daslang: Path, keep: bool) -> None:
     source_root = ROOT / case["source_root"]
     entry = Path(case["translation_entry"])
     if entry.is_absolute() or ".." in entry.parts:
@@ -136,24 +198,19 @@ def execute(case: dict[str, Any], dasroot: Path, keep: bool) -> None:
         raise CaseFailure(f"{case['id']}: missing C input {source_root / entry}")
     env = os.environ.copy()
     env["CARGO_TARGET_DIR"] = env.get(
-        "C2DAS_CASE_CARGO_TARGET_DIR", "/root/.cache/c2das/canonical-cases"
+        "C2DAS_CASE_CARGO_TARGET_DIR", str(ROOT / "target")
     )
     if case["status"] == "negative":
-        run_rust_assertion(case, env)
+        if case.get("rust_assertion") is not None:
+            run_rust_assertion(case, env)
+        else:
+            run_negative_translation(case, source_root / entry, env)
         print(f"PASS {case['id']}: exact TranslationError contract")
         return
     if "expected_exporter_failure" in case:
         run_rust_assertion(case, env)
         print(f"PASS {case['id']}: exact isolated exporter-failure contract")
         return
-    if case.get("status") == "known-red":
-        raise CaseFailure(
-            f"{case['id']}: known-red case has no executable canonical contract"
-        )
-
-    daslang = dasroot / "bin/daslang"
-    if not os.access(daslang, os.X_OK):
-        raise CaseFailure(f"{case['id']}: daslang is not executable: {daslang}")
 
     work = Path(tempfile.mkdtemp(prefix=f"c2das-case-{case['id']}-"))
     try:
@@ -176,7 +233,10 @@ def execute(case: dict[str, Any], dasroot: Path, keep: bool) -> None:
         reference = work / "c-reference"
         clang_flags = copied_flags(case["clang"].get("flags", []), copied_root)
         reference_sources = case["c_reference"].get("sources")
-        if reference_sources is None:
+        if reference_sources is None and case["c_reference"].get("entrypoint") == "main":
+            # The fixture defines its own C main; it is the reference program.
+            c_sources = [translated_c]
+        elif reference_sources is None:
             wrapper = make_reference_main(case, work)
             c_sources = [translated_c, wrapper]
         else:
@@ -191,7 +251,15 @@ def execute(case: dict[str, Any], dasroot: Path, keep: bool) -> None:
         )
         expected = case["expected"]
         reference_result = subprocess.run([str(reference)], cwd=work, env=env, text=True, capture_output=True)
-        compare(case, "C reference", reference_result, expected)
+        if expected.get("oracle") == "c-reference":
+            # Differential mode: the C program's observable behaviour is the
+            # oracle, whatever it is; the daScript run must reproduce it.
+            expected = {"exit_code": reference_result.returncode, "stdout": reference_result.stdout}
+            print(
+                f"     {case['id']}: C reference exit={expected['exit_code']} stdout={expected['stdout']!r}"
+            )
+        else:
+            compare(case, "C reference", reference_result, expected)
 
         run(
             [
@@ -246,6 +314,11 @@ def main() -> int:
     selection.add_argument("--case")
     selection.add_argument("--all-ready", action="store_true")
     selection.add_argument("--all-exporter-failures", action="store_true")
+    selection.add_argument(
+        "--all-known-red",
+        action="store_true",
+        help="survey every known-red case; report PASS/FAIL per case without stopping",
+    )
     selection.add_argument("--list", action="store_true")
     parser.add_argument("--keep-workdir", action="store_true")
     args = parser.parse_args()
@@ -262,6 +335,12 @@ def main() -> int:
             for case in cases
             if case["status"] == "ready" and "expected_exporter_failure" not in case
         ]
+    elif args.all_known_red:
+        selected = [
+            case
+            for case in cases
+            if case["status"] == "known-red" and "expected_exporter_failure" not in case
+        ]
     else:
         selected = [
             case
@@ -274,10 +353,27 @@ def main() -> int:
             return 0
         print("no canonical cases selected", file=sys.stderr)
         return 2
-    dasroot = Path(os.environ.get("DASROOT", "/root/daScript"))
+    try:
+        daslang = find_daslang()
+    except CaseFailure as error:
+        print(f"FAIL {error}", file=sys.stderr)
+        return 1
+    if args.all_known_red:
+        # Survey mode: known-red cases are expected to fail; report each one
+        # so that newly passing cases can be promoted to `ready`.
+        passed = 0
+        for case in selected:
+            try:
+                execute(case, daslang, args.keep_workdir)
+                passed += 1
+            except CaseFailure as error:
+                first_line = str(error).splitlines()[0] if str(error) else "unknown failure"
+                print(f"FAIL {case['id']}: {first_line}")
+        print(f"known-red survey: {passed}/{len(selected)} now pass")
+        return 0
     try:
         for case in selected:
-            execute(case, dasroot, args.keep_workdir)
+            execute(case, daslang, args.keep_workdir)
     except CaseFailure as error:
         print(f"FAIL {error}", file=sys.stderr)
         return 1

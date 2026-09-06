@@ -11,14 +11,20 @@ var c2da_rt_alloc_sizes : array<uint64>
 var c2da_rt_alloc_live : array<bool>
 
 def c2da_rt_init_heap() {
-    if (uint64(length(c2da_rt_heap)) == uint64(0)) {
+    if (length(c2da_rt_heap) == 0) {
         reserve(c2da_rt_heap, int(0x4000000))
         resize(c2da_rt_heap, 1)
     }
 }
+def c2da_rt_reset() {
+    c2da_rt_next = 0x0
+    resize(c2da_rt_alloc_addrs, 0)
+    resize(c2da_rt_alloc_sizes, 0)
+    resize(c2da_rt_alloc_live, 0)
+}
 def c2da_rt_malloc(size : uint64) : uint64 {
     c2da_rt_init_heap()
-    if (uint64(size) == uint64(0)) {
+    if (size == 0x0) {
         return 0x0
     }
     var start : uint64 = c2da_rt_next
@@ -30,14 +36,15 @@ def c2da_rt_malloc(size : uint64) : uint64 {
         resize(c2da_rt_heap, int(end))
     }
     c2da_rt_next = end
+    var address : uint64 = unsafe(intptr(unsafe(addr(c2da_rt_heap[int(start)]))))
     var record : uint64 = uint64(length(c2da_rt_alloc_addrs))
     resize(c2da_rt_alloc_addrs, int(record + 0x1))
     resize(c2da_rt_alloc_sizes, int(record + 0x1))
     resize(c2da_rt_alloc_live, int(record + 0x1))
-    c2da_rt_alloc_addrs[int(record)] = start
+    c2da_rt_alloc_addrs[int(record)] = address
     c2da_rt_alloc_sizes[int(record)] = size
     c2da_rt_alloc_live[int(record)] = true
-    return unsafe(intptr(unsafe(addr(c2da_rt_heap[int(start)]))))
+    return address
 }
 def c2da_rt_free(address : uint64) {
     var i : uint64 = 0x0
@@ -50,10 +57,10 @@ def c2da_rt_free(address : uint64) {
     }
 }
 def c2da_rt_realloc(address : uint64; size : uint64) : uint64 {
-    if (uint64(address) == uint64(0)) {
+    if (address == 0x0) {
         return c2da_rt_malloc(size)
     }
-    if (uint64(size) == uint64(0)) {
+    if (size == 0x0) {
         c2da_rt_free(address)
         return 0x0
     }
@@ -71,7 +78,7 @@ def c2da_rt_realloc(address : uint64; size : uint64) : uint64 {
         return 0x0
     }
     var replacement : uint64 = c2da_rt_malloc(size)
-    if (uint64(replacement) == uint64(0)) {
+    if (replacement == 0x0) {
         return 0x0
     }
     var copy_size : uint64 = 0x0
@@ -94,11 +101,11 @@ def c2da_rt_memset(dst : uint64; value : uint8; count : uint64) : uint64 {
 }
 def c2da_rt_calloc(count : uint64; size : uint64) : uint64 {
     var total : uint64 = count * size
-    if (uint64(size) != uint64(0) && total / size != count) {
+    if (size != 0x0 && total / size != count) {
         return 0x0
     }
     var address : uint64 = c2da_rt_malloc(total)
-    if (uint64(address) != uint64(0)) {
+    if (address != 0x0) {
         c2da_rt_memset(address, uint8(0x0), total)
     }
     return address
@@ -149,6 +156,15 @@ def c2da_rt_memchr(src : uint64; value : uint8; count : uint64) : uint64 {
         i = i + 0x1
     }
     return 0x0
+}
+struct C2daVaArg {
+    tag : int
+    i64 : int64
+    f64 : double
+    raw : uint64
+}
+struct C2daVaCursor {
+    index : int
 }
 def c2da_min_int(a : int; b : int) : int {
     if (a < b) {
@@ -226,45 +242,53 @@ def c2da___assert_fail(expr : void?; file : void?; line : uint; func : void?) {
 }
 [export]
 def array_initializers_runtime() : int {
-    var values : array<uint8> = []
-    var zeros : array<uint8> = []
-    values = [uint8(int(3)), uint8(int(5)), uint8(0)]
-    zeros = [uint8(0), uint8(0)]
+    var values : uint8[3] = fixed_array<uint8>(uint8(0), uint8(0), uint8(0))
+    var zeros : uint8[2] = fixed_array<uint8>(uint8(0), uint8(0))
+    values = fixed_array<uint8>(uint8(int(3)), uint8(int(5)), uint8(0))
+    zeros = fixed_array<uint8>(uint8(0), uint8(0))
     var c2da_fresh0 : int = int(0)
-    if (uint(unsafe(unsafe(addr(values[0]))[int(0)])) != uint(int(3))) {
+    if (int(unsafe(unsafe(addr(values[0]))[int(0)])) != int(3)) {
         c2da_fresh0 = int(1)
     }
-    var c2da_fresh1 : int = int(0)
-    if (uint(unsafe(unsafe(addr(values[0]))[int(1)])) != uint(int(5))) {
-        c2da_fresh1 = int(1)
+    var c2da_fresh2 : int = 1
+    if (!(c2da_fresh0 != 0)) {
+        var c2da_fresh1 : int = int(0)
+        if (int(unsafe(unsafe(addr(values[0]))[int(1)])) != int(5)) {
+            c2da_fresh1 = int(1)
+        }
+        if (!(c2da_fresh1 != 0)) {
+            c2da_fresh2 = 0
+        }
     }
-    var c2da_fresh2 : int = int(0)
-    if (uint64(c2da_fresh0) != uint64(0) || uint64(c2da_fresh1) != uint64(0)) {
-        c2da_fresh2 = int(1)
+    var c2da_fresh4 : int = 1
+    if (!(c2da_fresh2 != 0)) {
+        var c2da_fresh3 : int = int(0)
+        if (int(unsafe(unsafe(addr(values[0]))[int(2)])) != int(0)) {
+            c2da_fresh3 = int(1)
+        }
+        if (!(c2da_fresh3 != 0)) {
+            c2da_fresh4 = 0
+        }
     }
-    var c2da_fresh3 : int = int(0)
-    if (uint64(uint(unsafe(unsafe(addr(values[0]))[int(2)]))) != uint64(0)) {
-        c2da_fresh3 = int(1)
+    var c2da_fresh6 : int = 1
+    if (!(c2da_fresh4 != 0)) {
+        var c2da_fresh5 : int = int(0)
+        if (int(unsafe(unsafe(addr(zeros[0]))[int(0)])) != int(0)) {
+            c2da_fresh5 = int(1)
+        }
+        if (!(c2da_fresh5 != 0)) {
+            c2da_fresh6 = 0
+        }
     }
-    var c2da_fresh4 : int = int(0)
-    if (uint64(c2da_fresh2) != uint64(0) || uint64(c2da_fresh3) != uint64(0)) {
-        c2da_fresh4 = int(1)
-    }
-    var c2da_fresh5 : int = int(0)
-    if (uint64(uint(unsafe(unsafe(addr(zeros[0]))[int(0)]))) != uint64(0)) {
-        c2da_fresh5 = int(1)
-    }
-    var c2da_fresh6 : int = int(0)
-    if (uint64(c2da_fresh4) != uint64(0) || uint64(c2da_fresh5) != uint64(0)) {
-        c2da_fresh6 = int(1)
-    }
-    var c2da_fresh7 : int = int(0)
-    if (uint64(uint(unsafe(unsafe(addr(zeros[0]))[int(1)]))) != uint64(0)) {
-        c2da_fresh7 = int(1)
-    }
-    var c2da_fresh8 : int = int(0)
-    if (uint64(c2da_fresh6) != uint64(0) || uint64(c2da_fresh7) != uint64(0)) {
-        c2da_fresh8 = int(1)
+    var c2da_fresh8 : int = 1
+    if (!(c2da_fresh6 != 0)) {
+        var c2da_fresh7 : int = int(0)
+        if (int(unsafe(unsafe(addr(zeros[0]))[int(1)])) != int(0)) {
+            c2da_fresh7 = int(1)
+        }
+        if (!(c2da_fresh7 != 0)) {
+            c2da_fresh8 = 0
+        }
     }
     return c2da_fresh8
 }

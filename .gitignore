@@ -66,3 +66,15 @@ c2rust-analyze/c2rust_analysis_tests_minimal-*
 # Debug info dumps
 /dumps
 c2rust-transpile/dumps
+
+# daslang JIT cache created in the working directory
+.jitted_scripts/
+
+# Local daslang toolchains (git worktrees + builds) used by the Claude Code MCP/LSP servers
+/tmp/
+# MCP/LSP/smoke logs
+/logs/
+# Machine-local Claude Code state (enabled MCP servers)
+/.claude/settings.local.json
+# Agent worktrees created by Claude Code are scratch checkouts, never content.
+/.claude/worktrees/

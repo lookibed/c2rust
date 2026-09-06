@@ -67,10 +67,45 @@ def load_canonical_cases() -> dict[str, dict]:
     return {case["id"]: case for case in document["cases"]}
 
 
+def derived_override(case: dict) -> dict:
+    """Registry facts implied by a canonical case.
+
+    The canonical manifest is the single source of truth for executable
+    cases; the registry mirrors it instead of asking for a hand-written
+    duplicate override per case."""
+    status = case.get("status")
+    if status == "negative":
+        return {
+            "canonical_case": case["id"],
+            "entrypoint": "not-applicable",
+            "expected_kind": "translation-error",
+            "expected_value": case.get("expected_error", "unregistered"),
+            "runtime": "not-applicable",
+            "status": "supported",
+        }
+    expected = case.get("expected", {})
+    kind = "c-reference-oracle" if expected.get("oracle") == "c-reference" else "stdout-and-exit-code"
+    if case.get("expected_exporter_failure") is not None:
+        kind = "exporter-signal"
+        expected = case["expected_exporter_failure"]
+    return {
+        "canonical_case": case["id"],
+        "entrypoint": case.get("das_entrypoint", "unregistered"),
+        "expected_kind": kind,
+        "expected_value": expected,
+        "runtime": case.get("runtime", "unverified"),
+        "status": "supported" if status == "ready" else "known-red",
+    }
+
+
 def records(catalog: dict) -> dict:
     graphs = {graph["id"]: graph for graph in catalog["graph"]}
     overrides = {item["path"]: item for item in catalog.get("override", [])}
     canonical_cases = load_canonical_cases()
+    canonical_by_source = {
+        f"{case['source_root'].rstrip('/')}/{case['translation_entry']}": case
+        for case in canonical_cases.values()
+    }
     seen: dict[str, str] = {}
     fixtures: list[dict] = []
 
@@ -87,7 +122,10 @@ def records(catalog: dict) -> dict:
                     f"fixture {path} belongs to both {seen[path]} and {family['id']}"
                 )
             seen[path] = family["id"]
-            override = overrides.get(path, {})
+            override = overrides.get(path)
+            if override is None and path in canonical_by_source:
+                override = derived_override(canonical_by_source[path])
+            override = override or {}
             entrypoint = override.get("entrypoint", family["entrypoint"])
             fixture = {
                 "id": path.removesuffix(".c").replace("/", "--"),

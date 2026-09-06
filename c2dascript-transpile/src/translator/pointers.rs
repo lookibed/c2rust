@@ -52,14 +52,7 @@ impl<'c> Translation<'c> {
         let lhs_val = self.convert_expr(ctx, lhs, Some(qual_ty))?;
         let rhs_val = self.convert_expr(ctx, rhs, None)?;
         let is_ptr = self.is_pointer_type(qual_ty.ctype);
-        let rhs_expr = match Self::infer_type(&rhs_val.val) {
-            Some(ty) if matches!(ty.kind, DaTypeKind::Int | DaTypeKind::UInt) => rhs_val.val,
-            _ => DaExpr::Cast {
-                kind: das_ast::CastKind::Cast,
-                expr: Box::new(rhs_val.val),
-                to: DaType::uint(),
-            },
-        };
+        let rhs_expr = self.subscript_index_operand(rhs_val.val);
         let expr = DaExpr::Index(Box::new(lhs_val.val), Box::new(rhs_expr));
         let expr = if is_ptr {
             DaExpr::Unsafe(Box::new(expr))

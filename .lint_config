@@ -1,0 +1,17 @@
+# Repo-wide lint policy for c2das (TOML). Consumed by the pinned toolchain's
+# utils/lint/main.das, the MCP `lint` tool and the LSP lint macros when
+# DAS_LINT_CONFIG_PATH points here (the toolchain reads its own root by default).
+# Every rule below is disabled because the construct it flags is the faithful
+# spelling of the C source that c2das transpiles; all other rules stay on.
+
+[rules]
+# C identifiers such as `type`, `module`, `function`, `block` collide with Daslang
+# keywords; the transpiler has to rename them, so the renamed spelling is expected.
+LINT004 = false
+# Unused parameters are part of the C function signature (callbacks, ABI).
+LINT012 = false
+# 64-bit locals mirror the C operand types.
+LINT021 = false
+# Function length and cyclomatic complexity follow the C functions one to one.
+STYLE037 = false
+STYLE038 = false

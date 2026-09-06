@@ -113,6 +113,15 @@ pub enum DaExpr {
     /// `label:` — maps to [`ExprLabel`](ast_expressions.h:21)
     Label(String),
 
+    // -- function values --
+    /// `@@name` — a reference to a named function as a `function<…>` value.
+    /// Maps to [`ExprAddr`](ast_expressions.h:88) over a function; it is a
+    /// distinct node because `@@` is an operator, not part of the identifier.
+    FuncRef(String),
+    /// `default<T>` — the zero value of `T`. The only way to spell a null
+    /// `function<…>`, which does not accept `null` itself.
+    DefaultValue(DaType),
+
     // -- casts --
     /// `cast<T>(expr)`, `reinterpret<T>(expr)`, `upcast<T>(expr)`
     /// — maps to [`ExprCast`](ast_expressions.h:1275)
@@ -150,6 +159,14 @@ pub enum DaExpr {
     // -- array literal --
     /// `[a, b, c]` — maps to [`ExprMakeArray`](ast_expressions.h:1469)
     MakeArray(Vec<DaExpr>),
+
+    /// `fixed_array<T>(a, b, c)` — a fixed-size array value with inline
+    /// storage, the daScript form of a C array object.  Distinct from
+    /// [`MakeArray`], which builds a heap `array<T>`.
+    MakeFixedArray {
+        elem_type: DaType,
+        items: Vec<DaExpr>,
+    },
 
     // -- typeinfo --
     /// `typeinfo trait_name(type<T>)` — maps to [`ExprTypeInfo`](ast_expressions.h:1222)
@@ -198,501 +215,297 @@ fn write_indent(f: &mut fmt::Formatter, level: usize) -> fmt::Result {
     Ok(())
 }
 
-fn write_postfix_base(f: &mut fmt::Formatter, expr: &DaExpr) -> fmt::Result {
-    if matches!(
-        expr,
-        DaExpr::Deref(_)
-            | DaExpr::DerefExplicit(_)
-            | DaExpr::Assign(_, _)
-            | DaExpr::AssignOp { .. }
-            | DaExpr::Op1 { .. }
-            | DaExpr::Op2 { .. }
-            | DaExpr::Op3 { .. }
-    ) {
+// ── Precedence ───────────────────────────────────────────────────────
+//
+// The levels below mirror the daScript gen2 grammar exactly; see the
+// precedence declarations in `daScript/src/parser/ds2_parser.ypp`.  A larger
+// number binds tighter.  Parenthesisation is derived from these levels alone:
+// the printer never inspects, rewrites, or pattern-matches printed text.
+
+/// Statement-shaped expressions (`if`, `while`, `return`, …). They are never
+/// valid as an operand, so they are always parenthesised when nested.
+const PREC_STMT: u8 = 0;
+/// `=`, `+=`, `-=`, … — right associative.
+const PREC_ASSIGN: u8 = 3;
+/// `? :` — right associative.
+const PREC_TERNARY: u8 = 4;
+const PREC_OROR: u8 = 5;
+const PREC_ANDAND: u8 = 7;
+const PREC_OR: u8 = 8;
+const PREC_XOR: u8 = 9;
+const PREC_AND: u8 = 10;
+const PREC_EQ: u8 = 11;
+const PREC_REL: u8 = 12;
+/// `<<`, `>>`, `<<<`, `>>>`.
+const PREC_SHIFT: u8 = 13;
+const PREC_ADD: u8 = 14;
+const PREC_MUL: u8 = 15;
+/// `??` (null coalescing) — right associative.
+const PREC_QQ: u8 = 16;
+/// Prefix `-`, `+`, `~`, `!` — right associative.
+const PREC_UNARY: u8 = 17;
+/// `|>`, `<|`.
+const PREC_PIPE: u8 = 19;
+/// Prefix `*` (pointer dereference).
+const PREC_DEREF: u8 = 20;
+/// Postfix chain: `.`, `?.`, `[]`, `?[]`, `()`.
+const PREC_POSTFIX: u8 = 21;
+/// Self-delimiting forms: literals, names, `f(x)`-shaped constructs, blocks.
+const PREC_ATOM: u8 = 22;
+
+/// Associativity of a binary operator, needed to decide whether an operand of
+/// equal precedence has to be parenthesised.
+#[derive(Clone, Copy, PartialEq)]
+enum Assoc {
+    Left,
+    Right,
+}
+
+/// Precedence and associativity of a daScript binary operator.
+fn binary_op_info(op: &str) -> (u8, Assoc) {
+    match op {
+        "||" => (PREC_OROR, Assoc::Left),
+        "&&" => (PREC_ANDAND, Assoc::Left),
+        "|" => (PREC_OR, Assoc::Left),
+        "^" => (PREC_XOR, Assoc::Left),
+        "&" => (PREC_AND, Assoc::Left),
+        "==" | "!=" => (PREC_EQ, Assoc::Left),
+        "<" | ">" | "<=" | ">=" => (PREC_REL, Assoc::Left),
+        "<<" | ">>" | "<<<" | ">>>" => (PREC_SHIFT, Assoc::Left),
+        "+" | "-" => (PREC_ADD, Assoc::Left),
+        "*" | "/" | "%" => (PREC_MUL, Assoc::Left),
+        "??" => (PREC_QQ, Assoc::Right),
+        // An operator the AST invents but the grammar does not know about must
+        // never be printed unparenthesised on a guess.
+        _ => (PREC_STMT, Assoc::Left),
+    }
+}
+
+/// Printed precedence of a whole expression node.
+fn expr_precedence(expr: &DaExpr) -> u8 {
+    match expr {
+        // A negative numeric literal prints with a leading `-`, so it binds
+        // exactly like a unary expression rather than like an atom.
+        DaExpr::ConstInt(n) => {
+            if *n < 0 {
+                PREC_UNARY
+            } else {
+                PREC_ATOM
+            }
+        }
+        DaExpr::ConstFloat(n) | DaExpr::ConstDouble(n) => {
+            if n.is_sign_negative() {
+                PREC_UNARY
+            } else {
+                PREC_ATOM
+            }
+        }
+        DaExpr::Op2 { op, .. } => binary_op_info(op).0,
+        DaExpr::Assign(_, _) | DaExpr::AssignOp { .. } => PREC_ASSIGN,
+        DaExpr::Op3 { .. } => PREC_TERNARY,
+        DaExpr::Op1 { .. } | DaExpr::New(_, _) => PREC_UNARY,
+        DaExpr::Pipe(_, _) => PREC_PIPE,
+        DaExpr::Deref(_) => PREC_DEREF,
+        DaExpr::Field(_, _)
+        | DaExpr::SafeField(_, _)
+        | DaExpr::Index(_, _)
+        | DaExpr::SafeIndex(_, _)
+        | DaExpr::Call(_, _) => PREC_POSTFIX,
+        // `unsafe { … }` is a block statement, not an operand; the call-shaped
+        // `unsafe(expr)` form is an atom.
+        DaExpr::Unsafe(inner) => {
+            if matches!(**inner, DaExpr::Block(_)) {
+                PREC_STMT
+            } else {
+                PREC_ATOM
+            }
+        }
+        DaExpr::IfThenElse { .. }
+        | DaExpr::While(_, _)
+        | DaExpr::For { .. }
+        | DaExpr::Return(_)
+        | DaExpr::Break
+        | DaExpr::Continue
+        | DaExpr::Goto(_)
+        | DaExpr::Label(_)
+        | DaExpr::Delete(_) => PREC_STMT,
+        _ => PREC_ATOM,
+    }
+}
+
+/// Writes `expr` as an operand that must bind at least as tightly as
+/// `min_prec`, adding parentheses when it does not.
+fn write_operand(f: &mut fmt::Formatter, expr: &DaExpr, min_prec: u8) -> fmt::Result {
+    if expr_precedence(expr) < min_prec {
         write!(f, "({})", expr)
     } else {
         write!(f, "{}", expr)
     }
 }
 
-fn simple_numeric_type(expr: &DaExpr) -> Option<&'static str> {
-    match expr {
-        DaExpr::ConstInt(_) => Some("int"),
-        DaExpr::ConstUInt(_) => Some("uint"),
-        DaExpr::Cast { to, .. } => match to.kind {
-            DaTypeKind::Int | DaTypeKind::Int8 | DaTypeKind::Int16 => Some("int"),
-            DaTypeKind::UInt | DaTypeKind::UInt8 | DaTypeKind::UInt16 => Some("uint"),
-            DaTypeKind::Int64 => Some("int64"),
-            DaTypeKind::UInt64 => Some("uint64"),
-            _ => None,
-        },
-        DaExpr::Unsafe(inner) => simple_numeric_type(inner),
-        DaExpr::Op2 { op, left, .. } if matches!(*op, "<<" | ">>") => simple_numeric_type(left),
-        DaExpr::Op2 { left, .. } => simple_numeric_type(left),
-        DaExpr::Op1 { expr, .. } => simple_numeric_type(expr),
-        _ => None,
-    }
-}
-
-fn is_uint_of_int_cast(expr: &DaExpr) -> bool {
-    match expr {
-        DaExpr::Cast { to, expr, .. } if matches!(to.kind, DaTypeKind::UInt) => {
-            matches!(
-                expr.as_ref(),
-                DaExpr::Cast {
-                    to,
-                    ..
-                } if matches!(to.kind, DaTypeKind::Int | DaTypeKind::Int8 | DaTypeKind::Int16)
-            )
-        }
-        _ => false,
-    }
-}
-
-fn normalize_assignment_text(mut text: String) -> String {
-    for name in [
-        "tmp7", "tmp1_4", "tmp3_3", "tmp7_0", "tmp1_5", "tmp3_4", "tmp7_1", "tmp7_2", "tmp1_7",
-        "tmp3_6", "tmp7_3", "tmp1_8", "tmp3_7", "tmp7_4", "tmp7_5", "tmp1_10", "tmp3_9", "tmp7_6",
-        "tmp1_11", "tmp3_10",
-    ] {
-        for shift in ["2", "4"] {
-            let from = format!(" + (uint(int({})) << uint({}))", name, shift);
-            let to = format!(" + int((uint(int({})) << uint({})))", name, shift);
-            text = text.replace(&from, &to);
-            let from = format!(" - (uint(int({})) << uint({}))", name, shift);
-            let to = format!(" - int((uint(int({})) << uint({})))", name, shift);
-            text = text.replace(&from, &to);
-        }
-    }
-    text
-}
-
-fn write_numeric_child_as(
+/// Writes one operand of a binary operator. The operand on the associativity
+/// side may share the operator's precedence; the other side may not.
+fn write_binary_operand(
     f: &mut fmt::Formatter,
-    expr: &DaExpr,
-    parent_op: &str,
-    is_right: bool,
-    target: &str,
-) -> fmt::Result {
-    if simple_numeric_type(expr).map_or(false, |ty| ty != target) {
-        write!(f, "{}(", target)?;
-        write_expr_child(f, expr, parent_op, is_right)?;
-        write!(f, ")")
-    } else {
-        write_expr_child(f, expr, parent_op, is_right)
-    }
-}
-
-fn op_precedence(op: &str) -> u8 {
-    match op {
-        "||" => 1,
-        "&&" => 2,
-        "|" => 3,
-        "^" => 4,
-        "&" => 5,
-        "==" | "!=" => 6,
-        "<" | ">" | "<=" | ">=" => 7,
-        "<<" | ">>" => 8,
-        "+" | "-" => 9,
-        "*" | "/" | "%" => 10,
-        _ => 0,
-    }
-}
-
-fn expr_precedence(expr: &DaExpr) -> u8 {
-    match expr {
-        DaExpr::Op2 { op, .. } => op_precedence(op),
-        DaExpr::Assign(_, _) | DaExpr::AssignOp { .. } => 0,
-        DaExpr::Op1 { .. }
-        | DaExpr::Cast { .. }
-        | DaExpr::Call(_, _)
-        | DaExpr::Field(_, _)
-        | DaExpr::SafeField(_, _)
-        | DaExpr::Index(_, _)
-        | DaExpr::SafeIndex(_, _)
-        | DaExpr::Addr(_)
-        | DaExpr::Deref(_)
-        | DaExpr::DerefExplicit(_)
-        | DaExpr::Unsafe(_) => 11,
-        _ => 12,
-    }
-}
-
-fn write_expr_child(
-    f: &mut fmt::Formatter,
-    child: &DaExpr,
-    parent_op: &str,
+    operand: &DaExpr,
+    op: &str,
     is_right: bool,
 ) -> fmt::Result {
-    let parent_prec = op_precedence(parent_op);
-    let child_prec = expr_precedence(child);
-    let same_prec_needs_parens = is_right
-        && (matches!(
-            parent_op,
-            "-" | "/" | "%" | "<<" | ">>" | "<" | ">" | "<=" | ">=" | "==" | "!="
-        ) || (parent_op == "+" && matches!(child, DaExpr::Op2 { op: "+" | "-", .. })));
-    let needs_parens =
-        child_prec < parent_prec || (child_prec == parent_prec && same_prec_needs_parens);
-    if needs_parens {
-        write!(f, "({})", child)
+    let (prec, assoc) = binary_op_info(op);
+    let keeps_precedence = match assoc {
+        Assoc::Left => !is_right,
+        Assoc::Right => is_right,
+    };
+    let min_prec = if keeps_precedence { prec } else { prec + 1 };
+    write_operand(f, operand, min_prec)
+}
+
+// ── Literal spelling ─────────────────────────────────────────────────
+
+/// Escapes a daScript string constant. daScript unescapes `\"`, `\\`, `\n`,
+/// `\r`, `\t`, `\b`, `\f`, `\v`, `\{`, `\}` and `\xNN`; braces additionally
+/// open string interpolation and must always be escaped.
+fn write_escaped_string(f: &mut fmt::Formatter, value: &str) -> fmt::Result {
+    write!(f, "\"")?;
+    for ch in value.chars() {
+        match ch {
+            '"' => write!(f, "\\\"")?,
+            '\\' => write!(f, "\\\\")?,
+            '\n' => write!(f, "\\n")?,
+            '\r' => write!(f, "\\r")?,
+            '\t' => write!(f, "\\t")?,
+            '{' => write!(f, "\\{{")?,
+            '}' => write!(f, "\\}}")?,
+            c if (c as u32) < 0x20 || (c as u32) == 0x7f => write!(f, "\\x{:02x}", c as u32)?,
+            c => write!(f, "{}", c)?,
+        }
+    }
+    write!(f, "\"")
+}
+
+/// Spells an `int`/`int64` constant. daScript reads a plain decimal literal as
+/// `int` and an `l`-suffixed one as `int64`; `i64::MIN` has no direct spelling
+/// because the lexer range-checks the unsigned magnitude first.
+fn write_signed_literal(f: &mut fmt::Formatter, value: i64) -> fmt::Result {
+    if value >= i32::MIN as i64 && value <= i32::MAX as i64 {
+        write!(f, "{}", value)
+    } else if value == i64::MIN {
+        write!(f, "(-9223372036854775807l - 1l)")
     } else {
-        write!(f, "{}", child)
+        write!(f, "{}l", value)
     }
 }
 
-fn is_zero_expr(expr: &DaExpr) -> bool {
-    match expr {
-        DaExpr::ConstInt(0) | DaExpr::ConstUInt(0) => true,
-        DaExpr::Cast { expr, .. } => is_zero_expr(expr),
-        DaExpr::Call(func, args)
-            if matches!(
-                &**func,
-                DaExpr::Var(name)
-                    if matches!(
-                        name.as_str(),
-                        "int" | "uint" | "int64" | "uint64" | "int32" | "uint32"
-                    )
-            ) && args.len() == 1 =>
-        {
-            is_zero_expr(&args[0])
-        }
-        _ => false,
-    }
-}
-
-fn is_simple_value_expr(expr: &DaExpr) -> bool {
-    match expr {
-        DaExpr::Var(_)
-        | DaExpr::Field(_, _)
-        | DaExpr::SafeField(_, _)
-        | DaExpr::Index(_, _)
-        | DaExpr::SafeIndex(_, _)
-        | DaExpr::Deref(_)
-        | DaExpr::DerefExplicit(_) => true,
-        DaExpr::Cast { expr, .. } | DaExpr::Unsafe(expr) => is_simple_value_expr(expr),
-        _ => false,
-    }
-}
-
-fn is_bool_condition_expr(expr: &DaExpr) -> bool {
-    match expr {
-        DaExpr::ConstBool(_)
-        | DaExpr::Op1 { op: "!", .. }
-        | DaExpr::Op2 {
-            op: "==" | "!=" | "<" | ">" | "<=" | ">=" | "&&" | "||",
-            ..
-        } => true,
-        DaExpr::Unsafe(inner) => is_bool_condition_expr(inner),
-        DaExpr::Cast { to, .. } => matches!(to.kind, DaTypeKind::Bool),
-        _ => false,
-    }
-}
-
-fn write_condition_expr(f: &mut fmt::Formatter, expr: &DaExpr) -> fmt::Result {
-    if is_bool_condition_expr(expr) {
-        write_bool_condition_expr(f, expr)
+/// Spells a `uint`/`uint64` constant. daScript reads `0xHHHHHHHH` as `uint`
+/// and `0xH…uL` as `uint64`.
+fn write_unsigned_literal(f: &mut fmt::Formatter, value: u64) -> fmt::Result {
+    if value <= u32::MAX as u64 {
+        write!(f, "0x{:x}", value)
     } else {
-        write!(f, "uint64({}) != uint64(0)", expr)
+        write!(f, "0x{:x}uL", value)
     }
 }
 
-fn casted_bool_expr(expr: &DaExpr) -> Option<&DaExpr> {
-    match expr {
-        DaExpr::Cast { expr, to, .. } if to.is_numeric() && is_bool_condition_expr(expr) => {
-            Some(expr)
-        }
-        DaExpr::Call(func, args)
-            if matches!(
-                &**func,
-                DaExpr::Var(name)
-                    if matches!(
-                        name.as_str(),
-                        "int" | "uint" | "int64" | "uint64" | "int32" | "uint32"
-                    )
-            ) && args.len() == 1
-                && is_bool_condition_expr(&args[0]) =>
-        {
-            Some(&args[0])
-        }
-        _ => None,
+/// Shortest decimal form that round-trips back to the same binary value.
+/// Rust's `Debug` formatting for floats guarantees a `.`- or exponent-bearing
+/// spelling, which is exactly what daScript needs to lex a real constant.
+fn float_repr(value: f64) -> String {
+    let text = format!("{:?}", value);
+    if text.contains('.') || text.contains('e') || text.contains('E') || text.contains("inf")
+        || text.contains("NaN")
+    {
+        text
+    } else {
+        format!("{}.0", text)
     }
-}
-
-fn write_bool_condition_expr(f: &mut fmt::Formatter, expr: &DaExpr) -> fmt::Result {
-    match expr {
-        DaExpr::Op2 { op, left, right } if matches!(*op, "&&" | "||") => {
-            write_bool_condition_expr(f, left)?;
-            write!(f, " {} ", op)?;
-            write_bool_condition_expr(f, right)
-        }
-        DaExpr::Op2 { op, left, right } if matches!(*op, "==" | "!=") => {
-            if let Some(inner) = casted_bool_expr(left) {
-                if is_zero_expr(right) {
-                    if *op == "==" {
-                        write!(f, "!(")?;
-                        write_bool_condition_expr(f, inner)?;
-                        write!(f, ")")
-                    } else {
-                        write_bool_condition_expr(f, inner)
-                    }
-                } else {
-                    write!(f, "{}", expr)
-                }
-            } else if let Some(inner) = casted_bool_expr(right) {
-                if is_zero_expr(left) {
-                    if *op == "==" {
-                        write!(f, "!(")?;
-                        write_bool_condition_expr(f, inner)?;
-                        write!(f, ")")
-                    } else {
-                        write_bool_condition_expr(f, inner)
-                    }
-                } else {
-                    write!(f, "{}", expr)
-                }
-            } else {
-                write!(f, "{}", expr)
-            }
-        }
-        _ => write!(f, "{}", expr),
-    }
-}
-
-fn numeric_bool_cast_text(text: &str) -> Option<&str> {
-    for prefix in ["uint64(", "int64("] {
-        if text.starts_with(prefix) && text.ends_with(')') {
-            let inner = &text[prefix.len()..text.len() - 1];
-            if inner.contains("==")
-                || inner.contains("!=")
-                || inner.contains("&&")
-                || inner.contains("||")
-                || inner.contains("<=")
-                || inner.contains(">=")
-            {
-                return Some(inner);
-            }
-        }
-    }
-    None
 }
 
 impl DaExpr {
     pub(crate) fn fmt_with_indent(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
         use DaExpr::*;
         match self {
-            ConstInt(n) => {
-                if *n >= 0 && *n > 0x7FFFFFFF {
-                    write!(f, "0x{:x}", *n as u64)
-                } else {
-                    write!(f, "{}", n)
-                }
-            }
-            ConstUInt(n) => {
-                // ds_lexer.lpp правила:
-                //   0xHHHHHHHH        → UNSIGNED_INTEGER (uint32, 0..0xFFFFFFFF)
-                //   0xHHHHHHHHuL      → UNSIGNED_LONG_INTEGER (uint64, 0..0xFFFFFFFFFFFFFFFF)
-                if *n <= 0xFFFFFFFF {
-                    write!(f, "0x{:x}", n)
-                } else {
-                    write!(f, "0x{:x}uL", n)
-                }
-            }
+            ConstInt(n) => write_signed_literal(f, *n),
+            ConstUInt(n) => write_unsigned_literal(f, *n),
             ConstFloat(n) => {
-                let s = format!("{}", n);
-                if s.contains('.') || s.contains('e') || s.contains('E') {
-                    write!(f, "{}", s)
-                } else {
-                    write!(f, "{}.0", s)
-                }
+                // A daScript real literal without a suffix is `float`.
+                write!(f, "{}", float_repr(*n as f32 as f64))
             }
             ConstDouble(n) => {
-                let s = format!("{}", n);
-                let lit = if s.contains('.') || s.contains('e') || s.contains('E') {
-                    s
-                } else {
-                    format!("{}.0", s)
-                };
-                write!(f, "double({})", lit)
+                // A daScript `double` literal carries the `lf` suffix. Without
+                // it the literal is lexed as `float` and only then widened,
+                // which would silently truncate the mantissa to 24 bits.
+                write!(f, "{}lf", float_repr(*n))
             }
             ConstBool(b) => write!(f, "{}", b),
-            ConstString(s) => write!(f, "\"{}\"", s),
+            ConstString(s) => write_escaped_string(f, s),
             ConstNull => write!(f, "null"),
 
             Var(name) => write!(f, "{}", name),
 
             Field(obj, name) => {
-                write_postfix_base(f, obj)?;
+                write_operand(f, obj, PREC_POSTFIX)?;
                 write!(f, ".{}", name)
             }
             SafeField(obj, name) => {
-                write_postfix_base(f, obj)?;
+                write_operand(f, obj, PREC_POSTFIX)?;
                 write!(f, "?.{}", name)
             }
 
-            Index(arr, idx) => write!(f, "{}[{}]", arr, idx),
-            SafeIndex(arr, idx) => write!(f, "{}?[{}]", arr, idx),
+            Index(arr, idx) => {
+                write_operand(f, arr, PREC_POSTFIX)?;
+                write!(f, "[{}]", idx)
+            }
+            SafeIndex(arr, idx) => {
+                write_operand(f, arr, PREC_POSTFIX)?;
+                write!(f, "?[{}]", idx)
+            }
 
-            Op1 { op, expr } => write!(f, "{}{}", op, expr),
+            Op1 { op, expr } => {
+                // Prefix operators are right associative, so an operand that is
+                // itself unary still needs parentheses: `- -a` would otherwise
+                // print as `--a`, which lexes as a decrement.
+                write!(f, "{}", op)?;
+                write_operand(f, expr, PREC_UNARY + 1)
+            }
 
             Op2 { op, left, right } => {
-                if *op == "-" {
-                    let left_text = format!("{}", left);
-                    if left_text.starts_with("unsafe(") && left_text.ends_with(')') {
-                        let inner = &left_text["unsafe(".len()..left_text.len() - 1];
-                        if let Some((ptr, offset)) = inner.rsplit_once(" + ") {
-                            write!(f, "unsafe({} + ({} - {}))", ptr, offset, right)?;
-                            return Ok(());
-                        }
-                    }
-                    let add_expr = match &**left {
-                        DaExpr::Op2 { .. } => Some(&**left),
-                        DaExpr::Unsafe(inner) => Some(&**inner),
-                        _ => None,
-                    };
-                    if let Some(DaExpr::Op2 {
-                        op: "+",
-                        left: add_left,
-                        right: add_right,
-                    }) = add_expr
-                    {
-                        if is_simple_value_expr(add_left) {
-                            write_expr_child(f, add_left, "+", false)?;
-                            write!(f, " + (")?;
-                            write_expr_child(f, add_right, "-", false)?;
-                            write!(f, " - ")?;
-                            write_expr_child(f, right, "-", true)?;
-                            write!(f, ")")?;
-                            return Ok(());
-                        }
-                    }
-                }
-                if matches!(*op, "==" | "!=") && is_zero_expr(right) {
-                    if is_bool_condition_expr(left) {
-                        if *op == "==" {
-                            write!(f, "!(")?;
-                            write_bool_condition_expr(f, left)?;
-                            write!(f, ")")?;
-                        } else {
-                            write_bool_condition_expr(f, left)?;
-                        }
-                        return Ok(());
-                    }
-                    let left_text = format!("{}", left);
-                    if let Some(inner) = numeric_bool_cast_text(&left_text) {
-                        if *op == "==" {
-                            write!(f, "!({})", inner)?;
-                        } else {
-                            write!(f, "{}", inner)?;
-                        }
-                        return Ok(());
-                    }
-                    write!(f, "uint64({}) {} uint64(0)", left, op)?;
-                    return Ok(());
-                }
-                if matches!(*op, "==" | "!=") && is_zero_expr(left) {
-                    let right_text = format!("{}", right);
-                    if let Some(inner) = numeric_bool_cast_text(&right_text) {
-                        if *op == "==" {
-                            write!(f, "!({})", inner)?;
-                        } else {
-                            write!(f, "{}", inner)?;
-                        }
-                        return Ok(());
-                    }
-                }
-                if *op == "+" {
-                    if let DaExpr::Op2 {
-                        op: "+",
-                        left: add_left,
-                        right: add_right,
-                    } = &**left
-                    {
-                        let same_numeric =
-                            match (simple_numeric_type(add_right), simple_numeric_type(right)) {
-                                (Some(lty), Some(rty)) => lty == rty,
-                                _ => true,
-                            };
-                        if is_simple_value_expr(add_left) && same_numeric {
-                            write_expr_child(f, add_left, "+", false)?;
-                            write!(f, " + (")?;
-                            write_expr_child(f, add_right, "+", false)?;
-                            write!(f, " + ")?;
-                            write_expr_child(f, right, "+", true)?;
-                            write!(f, ")")?;
-                            return Ok(());
-                        }
-                    }
-                }
-                if matches!(*op, "<<" | ">>") {
-                    let left_text = format!("{}", left);
-                    if is_uint_of_int_cast(left) || left_text.starts_with("uint(int(") {
-                        write!(f, "int({} {} uint({}))", left_text, op, right)?;
-                        return Ok(());
-                    }
-                    if matches!(&**right, DaExpr::ConstInt(_) | DaExpr::ConstUInt(_)) {
-                        write!(f, "uint({}) {} uint({})", left, op, right)?;
-                        return Ok(());
-                    }
-                }
-                if matches!(*op, "&" | "|" | "^") {
-                    if let (Some(left_ty), Some(right_ty)) =
-                        (simple_numeric_type(left), simple_numeric_type(right))
-                    {
-                        if left_ty != right_ty {
-                            write_numeric_child_as(f, left, op, false, "uint")?;
-                            write!(f, " {} ", op)?;
-                            write_numeric_child_as(f, right, op, true, "uint")?;
-                            return Ok(());
-                        }
-                    }
-                }
-                if matches!(*op, "&" | "|" | "^")
-                    && matches!(&**right, DaExpr::ConstInt(_) | DaExpr::ConstUInt(_))
-                {
-                    write!(f, "uint(")?;
-                    write_expr_child(f, left, op, false)?;
-                    write!(f, ") {} uint({})", op, right)?;
-                    return Ok(());
-                }
-                if matches!(*op, "+" | "-" | "*" | "/" | "%" | "<<" | ">>") {
-                    if let (Some(left_ty), Some(right_ty)) =
-                        (simple_numeric_type(left), simple_numeric_type(right))
-                    {
-                        if left_ty != right_ty {
-                            write_expr_child(f, left, op, false)?;
-                            write!(f, " {} ", op)?;
-                            write_numeric_child_as(f, right, op, true, left_ty)?;
-                            return Ok(());
-                        }
-                    }
-                }
-                write_expr_child(f, left, op, false)?;
+                write_binary_operand(f, left, op, false)?;
                 write!(f, " {} ", op)?;
-                write_expr_child(f, right, op, true)
+                write_binary_operand(f, right, op, true)
             }
 
             Op3 { cond, then, else_ } => {
-                write!(f, "if ({}) {} else {}", cond, then, else_)
+                // daScript spells the conditional expression `c ? a : b`; it is
+                // right associative and binds just above assignment.
+                write_operand(f, cond, PREC_TERNARY + 1)?;
+                write!(f, " ? ")?;
+                write_operand(f, then, PREC_TERNARY + 1)?;
+                write!(f, " : ")?;
+                write_operand(f, else_, PREC_TERNARY)
             }
 
             Assign(left, right) => {
-                let right_text = normalize_assignment_text(format!("{}", right));
-                if matches!(&**left, DaExpr::Var(name) if matches!(name.as_str(), "n" | "b_0" | "c_2" | "b_1" | "c_3" | "tmp_41"))
-                    && matches!(&**right, DaExpr::Op2 { op: ">>", .. })
-                {
-                    write!(f, "{} = int({})", left, right_text)
-                } else {
-                    write!(f, "{} = {}", left, right_text)
-                }
+                write_operand(f, left, PREC_ASSIGN + 1)?;
+                write!(f, " = ")?;
+                write_operand(f, right, PREC_ASSIGN)
             }
 
-            AssignOp { op, left, right } => write!(f, "{} {} {}", left, op, right),
+            AssignOp { op, left, right } => {
+                write_operand(f, left, PREC_ASSIGN + 1)?;
+                write!(f, " {} ", op)?;
+                write_operand(f, right, PREC_ASSIGN)
+            }
 
-            Pipe(left, right) => write!(f, "{} |> {}", left, right),
+            Pipe(left, right) => {
+                write_operand(f, left, PREC_PIPE)?;
+                write!(f, " |> ")?;
+                write_operand(f, right, PREC_PIPE + 1)
+            }
 
             Call(func, args) => {
+                write_operand(f, func, PREC_POSTFIX)?;
                 let args_str: Vec<String> = args.iter().map(|a| format!("{}", a)).collect();
-                write!(f, "{}({})", func, args_str.join(", "))
+                write!(f, "({})", args_str.join(", "))
             }
 
             Block(block) => write_block(f, block, indent),
@@ -703,14 +516,10 @@ impl DaExpr {
                 elifs,
                 else_,
             } => {
-                write!(f, "if (")?;
-                write_condition_expr(f, cond)?;
-                write!(f, ") ")?;
+                write!(f, "if ({}) ", cond)?;
                 then.fmt_with_indent(f, indent)?;
                 for (elif_cond, elif_body) in elifs {
-                    write!(f, " elif (")?;
-                    write_condition_expr(f, elif_cond)?;
-                    write!(f, ") ")?;
+                    write!(f, " elif ({}) ", elif_cond)?;
                     elif_body.fmt_with_indent(f, indent)?;
                 }
                 let mut tail = else_.as_deref();
@@ -721,14 +530,10 @@ impl DaExpr {
                     else_,
                 }) = tail
                 {
-                    write!(f, " elif (")?;
-                    write_condition_expr(f, cond)?;
-                    write!(f, ") ")?;
+                    write!(f, " elif ({}) ", cond)?;
                     then.fmt_with_indent(f, indent)?;
                     for (elif_cond, elif_body) in elifs {
-                        write!(f, " elif (")?;
-                        write_condition_expr(f, elif_cond)?;
-                        write!(f, ") ")?;
+                        write!(f, " elif ({}) ", elif_cond)?;
                         elif_body.fmt_with_indent(f, indent)?;
                     }
                     tail = else_.as_deref();
@@ -741,9 +546,7 @@ impl DaExpr {
             }
 
             While(cond, body) => {
-                write!(f, "while (")?;
-                write_condition_expr(f, cond)?;
-                write!(f, ") ")?;
+                write!(f, "while ({}) ", cond)?;
                 body.fmt_with_indent(f, indent)
             }
 
@@ -770,6 +573,9 @@ impl DaExpr {
             Continue => write!(f, "continue"),
             Goto(label) => write!(f, "goto {}", label),
             Label(label) => write!(f, "{}:", label),
+
+            FuncRef(name) => write!(f, "@@{}", name),
+            DefaultValue(ty) => write!(f, "default<{}>", ty),
 
             Cast { kind, expr, to } => {
                 // For primitive types, use function-style cast: `uint(expr)` instead of `cast<uint>(expr)`.
@@ -806,7 +612,13 @@ impl DaExpr {
             Delete(expr) => write!(f, "delete {}", expr),
 
             Addr(expr) => write!(f, "addr({})", expr),
-            Deref(expr) => write!(f, "*{}", expr),
+            Deref(expr) => {
+                // `*` binds looser than the postfix chain, so `*p.f` means
+                // `*(p.f)`; the operand of a deref must therefore bind at
+                // least as tightly as `*` itself.
+                write!(f, "*")?;
+                write_operand(f, expr, PREC_DEREF)
+            }
             DerefExplicit(expr) => write!(f, "deref({})", expr),
 
             Unsafe(expr) => {
@@ -836,6 +648,11 @@ impl DaExpr {
             MakeArray(items) => {
                 let items_str: Vec<String> = items.iter().map(|i| format!("{}", i)).collect();
                 write!(f, "[{}]", items_str.join(", "))
+            }
+
+            MakeFixedArray { elem_type, items } => {
+                let items_str: Vec<String> = items.iter().map(|i| format!("{}", i)).collect();
+                write!(f, "fixed_array<{}>({})", elem_type, items_str.join(", "))
             }
 
             TypeInfo {

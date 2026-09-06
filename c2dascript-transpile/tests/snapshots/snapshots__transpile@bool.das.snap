@@ -1,9 +1,175 @@
 ---
 source: c2dascript-transpile/tests/snapshots.rs
-expression: cat tests/snapshots/bool.das
+expression: transpile --strict tests/snapshots/bool.c
 ---
 options gen2
 
+var c2da_rt_heap : array<uint8>
+
+var c2da_rt_next : uint64 = 0x0
+
+var c2da_rt_alloc_addrs : array<uint64>
+
+var c2da_rt_alloc_sizes : array<uint64>
+
+var c2da_rt_alloc_live : array<bool>
+
+def c2da_rt_init_heap() {
+    if (length(c2da_rt_heap) == 0) {
+        reserve(c2da_rt_heap, int(0x4000000))
+        resize(c2da_rt_heap, 1)
+    }
+}
+def c2da_rt_reset() {
+    c2da_rt_next = 0x0
+    resize(c2da_rt_alloc_addrs, 0)
+    resize(c2da_rt_alloc_sizes, 0)
+    resize(c2da_rt_alloc_live, 0)
+}
+def c2da_rt_malloc(size : uint64) : uint64 {
+    c2da_rt_init_heap()
+    if (size == 0x0) {
+        return 0x0
+    }
+    var start : uint64 = c2da_rt_next
+    var end : uint64 = start + size
+    if (end > 0x4000000) {
+        return 0x0
+    }
+    if (int(end) > length(c2da_rt_heap)) {
+        resize(c2da_rt_heap, int(end))
+    }
+    c2da_rt_next = end
+    var address : uint64 = unsafe(intptr(unsafe(addr(c2da_rt_heap[int(start)]))))
+    var record : uint64 = uint64(length(c2da_rt_alloc_addrs))
+    resize(c2da_rt_alloc_addrs, int(record + 0x1))
+    resize(c2da_rt_alloc_sizes, int(record + 0x1))
+    resize(c2da_rt_alloc_live, int(record + 0x1))
+    c2da_rt_alloc_addrs[int(record)] = address
+    c2da_rt_alloc_sizes[int(record)] = size
+    c2da_rt_alloc_live[int(record)] = true
+    return address
+}
+def c2da_rt_free(address : uint64) {
+    var i : uint64 = 0x0
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            c2da_rt_alloc_live[int(i)] = false
+            return
+        }
+        i = i + 0x1
+    }
+}
+def c2da_rt_realloc(address : uint64; size : uint64) : uint64 {
+    if (address == 0x0) {
+        return c2da_rt_malloc(size)
+    }
+    if (size == 0x0) {
+        c2da_rt_free(address)
+        return 0x0
+    }
+    var i : uint64 = 0x0
+    var old_size : uint64 = 0x0
+    var found : bool = false
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            old_size = c2da_rt_alloc_sizes[int(i)]
+            found = true
+        }
+        i = i + 0x1
+    }
+    if (found == false) {
+        return 0x0
+    }
+    var replacement : uint64 = c2da_rt_malloc(size)
+    if (replacement == 0x0) {
+        return 0x0
+    }
+    var copy_size : uint64 = 0x0
+    if (old_size < size) {
+        copy_size = old_size
+    } else {
+        copy_size = size
+    }
+    c2da_rt_memcpy(replacement, address, copy_size)
+    c2da_rt_free(address)
+    return replacement
+}
+def c2da_rt_memset(dst : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = value
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_calloc(count : uint64; size : uint64) : uint64 {
+    var total : uint64 = count * size
+    if (size != 0x0 && total / size != count) {
+        return 0x0
+    }
+    var address : uint64 = c2da_rt_malloc(total)
+    if (address != 0x0) {
+        c2da_rt_memset(address, uint8(0x0), total)
+    }
+    return address
+}
+def c2da_rt_memcpy(dst : uint64; src : uint64; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_memcmp(left : uint64; right : uint64; count : uint64) : int {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) < uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return -1
+        }
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) > uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return 1
+        }
+        i = i + 0x1
+    }
+    return 0
+}
+def c2da_rt_memmove(dst : uint64; src : uint64; count : uint64) : uint64 {
+    if (dst < src) {
+        var i : uint64 = 0x0
+        while (i < count) {
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+            i = i + 0x1
+        }
+    } else {
+        var i : uint64 = count
+        while (i > 0x0) {
+            i = i - 0x1
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        }
+    }
+    return dst
+}
+def c2da_rt_memchr(src : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)]) == value) {
+            return src + i
+        }
+        i = i + 0x1
+    }
+    return 0x0
+}
+struct C2daVaArg {
+    tag : int
+    i64 : int64
+    f64 : double
+    raw : uint64
+}
+struct C2daVaCursor {
+    index : int
+}
 def c2da_min_int(a : int; b : int) : int {
     if (a < b) {
         return a
@@ -70,7 +236,7 @@ def c2da_clip_uint(v : int) : uint {
     return uint(v)
 }
 def c2da_bool_to_uint(v : bool) : uint {
-    if (v) {
+    if (v == true) {
         return 0x1
     } else {
         return 0x0
@@ -80,74 +246,82 @@ def c2da___assert_fail(expr : void?; file : void?; line : uint; func : void?) {
 }
 [export]
 def test_bool() {
-    var int0 : bool = bool(0)
-    var ident0 : bool = bool(0)
-    var macro_int0 : bool = bool(0)
-    var macro_ident0 : bool = bool(0)
-    var int1 : bool = bool(1)
-    var ident1 : bool = bool(1)
-    var macro_int1 : bool = bool(1)
-    var macro_ident1 : bool = bool(1)
+    var int0 : bool = false
+    var ident0 : bool = false
+    var macro_int0 : bool = false
+    var macro_ident0 : bool = false
+    var int1 : bool = false
+    var ident1 : bool = false
+    var macro_int1 : bool = false
+    var macro_ident1 : bool = false
+    int0 = int(0) != 0
+    ident0 = int(0) != 0
+    macro_int0 = int(0) != 0
+    macro_ident0 = int(0) != 0
+    int1 = int(1) != 0
+    ident1 = int(1) != 0
+    macro_int1 = int(1) != 0
+    macro_ident1 = int(1) != 0
     var c2da_fresh0 : int = int(0)
-    if (uint64(0) != uint64(0)) {
-        c2da_fresh0 = 2
+    if (int(0) != 0) {
+        c2da_fresh0 = int(2)
     } else {
-        c2da_fresh0 = 3
+        c2da_fresh0 = int(3)
     }
     c2da_fresh0
     var c2da_fresh1 : int = int(0)
-    if (uint64(0) != uint64(0)) {
-        c2da_fresh1 = 2
+    if (int(0) != 0) {
+        c2da_fresh1 = int(2)
     } else {
-        c2da_fresh1 = 3
+        c2da_fresh1 = int(3)
     }
     c2da_fresh1
     var c2da_fresh2 : int = int(0)
-    if (uint64(0) != uint64(0)) {
-        c2da_fresh2 = 2
+    if (int(0) != 0) {
+        c2da_fresh2 = int(2)
     } else {
-        c2da_fresh2 = 3
+        c2da_fresh2 = int(3)
     }
     c2da_fresh2
     var c2da_fresh3 : int = int(0)
-    if (uint64(0) != uint64(0)) {
-        c2da_fresh3 = 2
+    if (int(0) != 0) {
+        c2da_fresh3 = int(2)
     } else {
-        c2da_fresh3 = 3
+        c2da_fresh3 = int(3)
     }
     c2da_fresh3
     var c2da_fresh4 : int = int(0)
-    if (uint64(1) != uint64(0)) {
-        c2da_fresh4 = 2
+    if (int(1) != 0) {
+        c2da_fresh4 = int(2)
     } else {
-        c2da_fresh4 = 3
+        c2da_fresh4 = int(3)
     }
     c2da_fresh4
     var c2da_fresh5 : int = int(0)
-    if (uint64(1) != uint64(0)) {
-        c2da_fresh5 = 2
+    if (int(1) != 0) {
+        c2da_fresh5 = int(2)
     } else {
-        c2da_fresh5 = 3
+        c2da_fresh5 = int(3)
     }
     c2da_fresh5
     var c2da_fresh6 : int = int(0)
-    if (uint64(1) != uint64(0)) {
-        c2da_fresh6 = 2
+    if (int(1) != 0) {
+        c2da_fresh6 = int(2)
     } else {
-        c2da_fresh6 = 3
+        c2da_fresh6 = int(3)
     }
     c2da_fresh6
     var c2da_fresh7 : int = int(0)
-    if (uint64(1) != uint64(0)) {
-        c2da_fresh7 = 2
+    if (int(1) != 0) {
+        c2da_fresh7 = int(2)
     } else {
-        c2da_fresh7 = 3
+        c2da_fresh7 = int(3)
     }
     c2da_fresh7
-    int0 = int0 | int(int1)
-    int0
-}
-
-[export] def main() : int {
-    return 0
+    var c2da_fresh8 : int = int(0)
+    if (int1 == true) {
+        c2da_fresh8 = int(1)
+    }
+    int0 = bool(int(int0) | c2da_fresh8)
+    return
 }

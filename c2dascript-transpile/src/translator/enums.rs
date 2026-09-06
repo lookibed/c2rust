@@ -41,8 +41,11 @@ impl<'c> Translation<'c> {
                     ConstIntExpr::U(v) => Some(DaExpr::ConstUInt(v)),
                     ConstIntExpr::I(v) => Some(DaExpr::ConstInt(v)),
                 };
+                // A C enumerator can be spelled with a daScript reserved word.
+                // It must go through the same renamer as the global alias that
+                // Pass 3 exports, or the two names drift apart.
                 das_variants.push(DaEnumVariant {
-                    name: name.clone(),
+                    name: self.declare_value_name(vid, name),
                     value: das_val,
                 });
             }
@@ -52,10 +55,6 @@ impl<'c> Translation<'c> {
             base_type: base,
             variants: das_variants,
         }))
-    }
-
-    pub fn convert_enum_zero_initializer(&self, _type_id: CTypeId) -> WithStmts<DaExpr> {
-        WithStmts::new_val(self.enum_for_i64(0))
     }
 
     pub fn convert_cast_from_enum(
@@ -71,18 +70,4 @@ impl<'c> Translation<'c> {
         })
     }
 
-    pub fn convert_cast_to_enum(
-        &self,
-        ctx: ExprContext,
-        _enum_type_id: CTypeId,
-        _enum_id: CEnumId,
-        _expr: Option<CExprId>,
-        val: DaExpr,
-    ) -> TranslationResult<DaExpr> {
-        Ok(val)
-    }
-
-    fn enum_for_i64(&self, value: i64) -> DaExpr {
-        DaExpr::ConstInt(value)
-    }
 }

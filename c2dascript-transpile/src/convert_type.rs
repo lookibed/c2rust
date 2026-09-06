@@ -1,5 +1,5 @@
 use crate::c_ast::*;
-use crate::diagnostics::TranslationResult;
+use crate::diagnostics::{TranslationError, TranslationResult};
 use crate::renamer::Renamer;
 use crate::translator::Translation;
 use crate::TranspilerConfig;
@@ -8,6 +8,19 @@ use das_ast::{DaType, DaTypeKind};
 use indexmap::IndexSet;
 use std::collections::{HashMap, HashSet};
 use std::ops::Index;
+
+/// Placeholder for a C function type that has no daScript function value:
+/// today only the variadic ones, whose ABI boundary is rejected at the call
+/// site with its own diagnostic.
+pub(crate) const UNTYPED_FUNCTION: &str = "function";
+
+/// True for the daScript types produced by `TypeConverter::function_value_type`,
+/// i.e. the ones that are already callable values and must never be wrapped in
+/// `?` or crossed through the raw-pointer ABI.
+pub(crate) fn is_function_value_type(ty: &DaType) -> bool {
+    matches!(&ty.kind, DaTypeKind::Named(name)
+        if name == UNTYPED_FUNCTION || name.starts_with("function<"))
+}
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 enum FieldKey {
@@ -62,17 +75,6 @@ impl TypeConverter {
     pub fn resolve_decl_name(&self, decl_id: CDeclId) -> Option<String> {
         self.renamer.get(&decl_id)
     }
-    pub fn resolve_decl_suffix_name(&mut self, decl_id: CDeclId, suffix: &'static str) -> &str {
-        let key = (decl_id, suffix);
-        self.suffix_names.entry(key).or_insert_with(|| {
-            let name = self
-                .renamer
-                .get(&decl_id)
-                .unwrap_or_else(|| "Unnamed".into());
-            self.renamer.pick_name(&format!("C2Da_{name}_{suffix}"))
-        })
-    }
-
     pub fn declare_field_name(
         &mut self,
         rec_id: CRecordId,
@@ -93,20 +95,6 @@ impl TypeConverter {
             .or_insert_with(|| Renamer::keywords())
             .insert(key, name)
             .expect("Field already declared")
-    }
-    pub fn declare_padding(&mut self, rec_id: CRecordId, pad_idx: usize) -> String {
-        let key = FieldKey::Padding(pad_idx);
-        self.fields
-            .entry(rec_id)
-            .or_insert_with(|| Renamer::keywords())
-            .get(&key)
-            .unwrap_or_else(|| {
-                self.fields
-                    .entry(rec_id)
-                    .or_insert_with(|| Renamer::keywords())
-                    .insert(key, "c2da_padding")
-                    .unwrap()
-            })
     }
     pub fn resolve_field_name(
         &self,
@@ -160,6 +148,15 @@ impl TypeConverter {
             CTypeKind::WChar => Ok(DaType::int()),
             CTypeKind::BFloat16 => Ok(DaType::float()),
             CTypeKind::Pointer(qtype) => {
+                // A C pointer-to-function has no pointer analogue in daScript:
+                // `function<…>` *is* the callable value.  See
+                // `TypeConverter::function_value_type`.
+                if let CTypeKind::Function(ret, ref params, is_variadic, _, _) =
+                    ctxt.resolve_type(qtype.ctype).kind
+                {
+                    let params = params.clone();
+                    return self.function_value_type(ctxt, ret, &params, is_variadic);
+                }
                 let pointee = self.convert_pointee(ctxt, qtype.ctype)?;
                 Ok(DaType::pointer(pointee))
             }
@@ -197,7 +194,10 @@ impl TypeConverter {
                 Ok(DaType::array(elt))
             }
             CTypeKind::Attributed(ty, _) | CTypeKind::Atomic(ty) => self.convert(ctxt, ty.ctype),
-            CTypeKind::Function(_, _, _, _, _) => Ok(DaType::named("function")),
+            CTypeKind::Function(ret, ref params, is_variadic, _, _) => {
+                let params = params.clone();
+                self.function_value_type(ctxt, ret, &params, is_variadic)
+            }
             CTypeKind::TypeOf(ty) | CTypeKind::Auto(ty) => self.convert(ctxt, ty),
             ref t => {
                 log::warn!("Unsupported C type kind {:?}, using auto", t);
@@ -227,14 +227,50 @@ impl TypeConverter {
         &mut self,
         ctxt: &TypedAstContext,
         ret: Option<CQualTypeId>,
-        _params: &[CQualTypeId],
-        _is_var: bool,
+        params: &[CQualTypeId],
+        is_var: bool,
     ) -> TranslationResult<DaType> {
-        let _ret_type = match ret {
-            None => DaType::void(),
-            Some(ret) => self.convert(ctxt, ret.ctype)?,
-        };
-        Ok(DaType::named("function"))
+        match ret {
+            None => Ok(DaType::named(UNTYPED_FUNCTION)),
+            Some(ret) => self.function_value_type(ctxt, ret, params, is_var),
+        }
+    }
+
+    /// daScript's typed function value for a C function type.
+    ///
+    /// C `int (*)(int, int)` has no pointer analogue in daScript: the language's
+    /// own `function<(a:int;b:int):int>` *is* the callable value.  It compares
+    /// against `null`, `default<T>` is its null value, `@@name` takes one from a
+    /// function and `invoke` calls it.  Parameter names are mandatory in the type
+    /// syntax but take no part in type identity, so they are synthesised.
+    ///
+    /// A variadic function pointer keeps the old untyped placeholder: the
+    /// variadic ABI boundary is diagnosed at the call site
+    /// (`is_variadic_function_pointer_callee`), and producing a `TranslationError`
+    /// here instead would replace that precise diagnostic with a type-conversion
+    /// one.
+    fn function_value_type(
+        &mut self,
+        ctxt: &TypedAstContext,
+        ret: CQualTypeId,
+        params: &[CQualTypeId],
+        is_variadic: bool,
+    ) -> TranslationResult<DaType> {
+        if is_variadic {
+            return Ok(DaType::named(UNTYPED_FUNCTION));
+        }
+        let mut rendered = String::from("function<(");
+        for (index, param) in params.iter().enumerate() {
+            if index > 0 {
+                rendered.push(';');
+            }
+            let param_type = self.convert(ctxt, param.ctype)?;
+            rendered.push_str(&format!("_arg{index}:{param_type}"));
+        }
+        rendered.push(')');
+        let ret_type = self.convert(ctxt, ret.ctype)?;
+        rendered.push_str(&format!(":{ret_type}>"));
+        Ok(DaType::named(&rendered))
     }
 
     pub fn convert_function_param(
@@ -334,18 +370,39 @@ impl<'c> Translation<'c> {
         match resolved.kind {
             Void => Ok(DaType::void()),
             Bool => Ok(DaType::bool()),
-            Int | Short | UShort | Int128 | Int32 => Ok(DaType::int()),
+            Int | Int32 => Ok(DaType::int()),
             SChar | Char | Int8 => Ok(DaType::int8()),
-            Int16 => Ok(DaType::int16()),
+            Short | Int16 => Ok(DaType::int16()),
             Int64 | Long | LongLong => Ok(DaType::int64()),
             IntPtr | SSize | PtrDiff | IntMax => Ok(DaType::int64()),
             UChar | UInt8 => Ok(DaType::uint8()),
-            UInt16 => Ok(DaType::uint16()),
-            UInt | UInt128 | UInt32 => Ok(DaType::uint()),
+            UShort | UInt16 => Ok(DaType::uint16()),
+            UInt | UInt32 => Ok(DaType::uint()),
             UInt64 | ULong | ULongLong | UIntPtr | Size | WChar => Ok(DaType::uint64()),
             Float | BFloat16 => Ok(DaType::float()),
-            Double | LongDouble | Float128 => Ok(DaType::double()),
+            Double => Ok(DaType::double()),
+            // daScript has no 128-bit integer and no wider-than-double float.
+            // Silently narrowing them would change observable C results, so
+            // the strict translator refuses instead.
+            Int128 | UInt128 => Err(TranslationError::generic(
+                "C 128-bit integer type has no daScript representation",
+            )),
+            LongDouble | Float128 => Err(TranslationError::generic(
+                "C extended-precision floating type has no daScript representation",
+            )),
             Pointer(inner) => {
+                // A pointer to a function is the daScript function value itself.
+                if let Function(ret, ref params, is_variadic, _, _) =
+                    self.ast_context.resolve_type(inner.ctype).kind
+                {
+                    let params = params.clone();
+                    return self.type_converter.borrow_mut().convert_function(
+                        &self.ast_context,
+                        Some(ret),
+                        &params,
+                        is_variadic,
+                    );
+                }
                 if matches!(self.ast_context.resolve_type(inner.ctype).kind, Void) {
                     // C `void *` is still a pointer at the source boundary.
                     // Only the canonical runtime ABI represents exposed
@@ -356,12 +413,35 @@ impl<'c> Translation<'c> {
                 let inner_ty = self.convert_type(inner)?;
                 Ok(DaType::pointer(inner_ty))
             }
-            ConstantArray(inner, _) | IncompleteArray(inner) | VariableArray(inner, _) => {
+            // A C array of constant extent owns inline storage whose layout
+            // Clang already described.  daScript's `T[N]` is the only array
+            // form with that property: it is stored inline, it copies by
+            // value, and `addr(a[0])` decays to a pointer over the same
+            // bytes.  `array<T>` is a heap handle and would make every Clang
+            // offset in object_memory.rs wrong.
+            ConstantArray(inner, size) => {
+                let inner_ty = self.convert_type_raw(inner)?;
+                if size == 0 {
+                    return Err(TranslationError::generic(
+                        "zero-length C array has no daScript storage",
+                    ));
+                }
+                Ok(DaType::fixed_array(inner_ty, size))
+            }
+            IncompleteArray(inner) | VariableArray(inner, _) => {
                 let inner_ty = self.convert_type_raw(inner)?;
                 Ok(DaType::array(inner_ty))
             }
             Vector(_, _) | UnhandledSveType => self.reject_vector_type(typ),
-            Function(_, _, _, _, _) => Ok(DaType::named("function")),
+            Function(ret, ref params, is_variadic, _, _) => {
+                let params = params.clone();
+                self.type_converter.borrow_mut().convert_function(
+                    &self.ast_context,
+                    Some(ret),
+                    &params,
+                    is_variadic,
+                )
+            }
             Struct(decl_id) | Union(decl_id) | Enum(decl_id) => {
                 let decl = &self.ast_context[decl_id];
                 if let Some(name) = decl.kind.get_name() {

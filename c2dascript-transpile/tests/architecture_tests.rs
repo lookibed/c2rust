@@ -192,11 +192,19 @@ fn canonical_abi_owns_storage_literals_bool_and_pointer_raw_conversions() {
     let translator = root.join("c2dascript-transpile/src/translator");
     let abi = std::fs::read_to_string(translator.join("abi.rs")).expect("abi.rs");
 
+    // The numeric side of the ABI is the C conversion table: integer promotion
+    // (`promoted_arith_type`), usual arithmetic conversions
+    // (`usual_arithmetic_type`) and the promote/narrow pair every operand and
+    // store goes through. The former `storage_byte_to_numeric` helper stripped
+    // explicit narrowing casts and was replaced by that table.
     for api in [
         "fn raw_address_to_pointer",
         "fn pointer_to_raw_address",
         "fn null_pointer",
-        "fn storage_byte_to_numeric",
+        "fn promoted_arith_type",
+        "fn usual_arithmetic_type",
+        "fn promote_operand",
+        "fn narrow_to_storage",
         "fn integer_literal_for_type",
         "fn bool_to_integer",
     ] {
@@ -239,10 +247,10 @@ fn real_world_driver_fixtures_are_present() {
         .parent()
         .expect("workspace root");
 
+    // compile_commands.json is machine-local (gitignored); the canonical runner generates its
+    // own per case, so only the C graph entry points are required here.
     for fixture in [
-        "tests/manual/real-world-h264bsd-mp4/compile_commands.json",
         "tests/manual/real-world-h264bsd-mp4/src/all.c",
-        "tests/manual/real-world-plmpeg-stream/compile_commands.json",
         "tests/manual/real-world-plmpeg-stream/src/all.c",
     ] {
         let path = root.join(fixture);

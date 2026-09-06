@@ -201,12 +201,12 @@ fn p21_byte_reads_are_widened_before_numeric_operations() {
     let d = transpile("p21_byte_numeric");
     assert!(d.contains("def byte_numeric_edges() : int"));
     assert!(
-        d.contains("uint(left) < uint(right)"),
-        "byte comparison must widen storage uint8 values to uint"
+        d.contains("int(left) < int(right)"),
+        "C promotes unsigned char to int, so the comparison is signed"
     );
     assert!(
-        d.contains("uint("),
-        "byte arithmetic must widen storage uint8 values"
+        d.contains("int(left) + int(right)"),
+        "byte arithmetic must widen storage uint8 values to the promoted type"
     );
     assert!(!d.contains("uint8? = uint64("));
 }
@@ -486,8 +486,11 @@ fn p24_nonruntime_pointer_calls_use_typed_pointer_abi_without_runtime() {
 #[test]
 fn p25_array_initializers_are_aggregate_ast_not_numeric_casts() {
     let d = transpile("p25_array_initializers");
-    assert!(d.contains("var values : array<uint8> = []"));
-    assert!(d.contains("values = [uint8(int(3)), uint8(int(5)), uint8(0)]"));
-    assert!(d.contains("zeros = [uint8(0), uint8(0)]"));
+    // A C array of constant extent owns inline storage, so it is a daScript
+    // fixed array `T[N]`, never a heap `array<T>` handle.
+    assert!(d.contains("var values : uint8[3]"));
+    assert!(d.contains("values = fixed_array<uint8>(uint8(int(3)), uint8(int(5)), uint8(0))"));
+    assert!(d.contains("zeros = fixed_array<uint8>(uint8(0), uint8(0))"));
     assert!(!d.contains("cast<array<uint8>>(0)"));
+    assert!(!d.contains("array<uint8> = []"));
 }

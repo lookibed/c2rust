@@ -7,6 +7,7 @@
 #ifndef AstExporter_hpp
 #define AstExporter_hpp
 
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>

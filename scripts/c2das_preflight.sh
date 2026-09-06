@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Canonical WSL/Linux preflight. It runs only in the native `/root/c2das` Git checkout.
+# Linux preflight. Runs from any Git checkout of this repository; needs cargo, python3 and daslang.
 set -euo pipefail
 
-# `wsl.exe env ...` starts a non-login shell.  Make the canonical runner independent of
-# interactive shell configuration while preserving ordinary CI PATHs.
+# Make the runner independent of interactive shell configuration while preserving ordinary CI PATHs.
 if ! command -v cargo >/dev/null 2>&1 && [[ -f "$HOME/.cargo/env" ]]; then
     # shellcheck disable=SC1090
     source "$HOME/.cargo/env"
 fi
-command -v cargo >/dev/null 2>&1 || { echo 'cargo is unavailable in this WSL runtime' >&2; exit 127; }
+command -v cargo >/dev/null 2>&1 || { echo 'cargo is unavailable' >&2; exit 127; }
 
 mode=fast
 while (($#)); do
@@ -28,7 +27,7 @@ gate() { local name="$1"; shift; printf '\n== c2das gate: %s ==\n' "$name"; "$@"
 
 check_repository() {
     git -C "$root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-        echo "canonical WSL checkout must be a Git repository: $root" >&2; return 1;
+        echo "checkout must be a Git repository: $root" >&2; return 1;
     }
     printf 'native git checkout %s\n' "$(git -C "$root" rev-parse --short HEAD)"
 }

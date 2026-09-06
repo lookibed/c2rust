@@ -88,7 +88,7 @@ bash tests/syntax/check_abi_das.sh
 rg -n "normalize_generated_numeric_patterns|normalize_first_phase_shift_assignments|replace_generated_function" c2dascript-transpile/src/translator
 ```
 
-The ABI runner is executed by WSL `/root/daScript/bin/daslang`; PLMPEG then
-H264 are future WSL end-to-end goals only.  Neither receives readiness credit
+The ABI runner is executed by the real `daslang`; PLMPEG then
+H264 are future end-to-end goals only.  Neither receives readiness credit
 until it is transpiled and executed through that pipeline without a text
 workaround.

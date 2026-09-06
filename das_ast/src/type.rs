@@ -60,12 +60,13 @@ impl DaType {
                 | DaTypeKind::Float
                 | DaTypeKind::Double
         ) || matches!(&self.kind, DaTypeKind::Named(n) if matches!(
+            // Only the C standard integer aliases belong here. A name taken
+            // from one particular corpus is not a language fact and must never
+            // decide how a cast is printed.
             n.as_str(),
             "size_t" | "int8_t" | "int16_t" | "int32_t" | "int64_t"
                 | "uint8_t" | "uint16_t" | "uint32_t" | "uint64_t"
                 | "intptr_t" | "uintptr_t" | "ptrdiff_t" | "ssize_t"
-                | "u8" | "u16" | "u32" | "i16" | "i32"
-                | "boxsize_t" | "MP4D_file_offset_t"
         ))
     }
 
@@ -120,10 +121,26 @@ impl fmt::Display for DaType {
             DaTypeKind::String_ => write!(f, "string"),
             DaTypeKind::Pointer(inner) => write!(f, "{}?", inner),
             DaTypeKind::Array(inner) => write!(f, "array<{}>", inner),
-            DaTypeKind::FixedArray(inner, n) => write!(f, "fixed_array<{}, {}>", inner, n),
+            // daScript spells a fixed array `T[d0][d1]…` with the outermost
+            // dimension first, exactly like C.  The nesting in the AST is
+            // outermost-first too, so the dimensions are collected before the
+            // element type is printed.
+            DaTypeKind::FixedArray(inner, n) => {
+                let mut dims = vec![*n];
+                let mut element = inner.as_ref();
+                while let DaTypeKind::FixedArray(next, count) = &element.kind {
+                    dims.push(*count);
+                    element = next.as_ref();
+                }
+                write!(f, "{}", element)?;
+                for dim in dims {
+                    write!(f, "[{}]", dim)?;
+                }
+                Ok(())
+            }
             DaTypeKind::Named(name) => write!(f, "{}", name),
             DaTypeKind::Auto => write!(f, "auto"),
-        };
+        }?;
         // Qualifiers after the type
         if self.is_ref {
             write!(f, "&")?;

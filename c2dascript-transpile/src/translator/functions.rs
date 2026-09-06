@@ -52,25 +52,9 @@ impl<'c> Translation<'c> {
                     val
                 }
             });
-        let init = init.or_else(|| {
-            let r = self.ast_context.resolve_type(typ.ctype);
-            if let CTypeKind::ConstantArray(inner, size) = &r.kind {
-                if *size > 0 && *size <= 10000 {
-                    let elem_ty = type_kind_to_datype(&self.ast_context.resolve_type(*inner).kind);
-                    let zero = if matches!(elem_ty.kind, DaTypeKind::Int) {
-                        DaExpr::ConstInt(0)
-                    } else {
-                        DaExpr::Cast {
-                            kind: das_ast::CastKind::Cast,
-                            expr: Box::new(DaExpr::ConstInt(0)),
-                            to: elem_ty,
-                        }
-                    };
-                    return Some(DaExpr::MakeArray(vec![zero; *size]));
-                }
-            }
-            None
-        });
+        // A daScript fixed array is zero-initialized by its declaration, at
+        // any extent, so an uninitialized C array global needs no initializer
+        // expression at all.
         let name = self.declare_value_name(decl_id, name);
         Ok(DaDecl::Variable(DaVariable {
             name,
@@ -176,7 +160,12 @@ impl<'c> Translation<'c> {
         let fn_name = self.declare_value_name(decl_id, name);
         let mut func = mk().fn_decl(fn_name.as_str(), params, ret_type, body_das);
         if let DaDecl::Function(ref mut f) = func {
-            if body.is_some() {
+            // Only the translation unit's own functions are part of its API.
+            // A header's `static inline` helpers (`__bswap_32` and friends, which
+            // arrive with <stdio.h>) are implementation detail that happens to be
+            // visible here; exporting them published names the C program never
+            // defined.
+            if body.is_some() && self.is_defined_in_main_file(decl_id) {
                 f.annotations.push("export".into());
             }
         }
@@ -214,7 +203,23 @@ impl<'c> Translation<'c> {
                 return self.convert_builtin_call(ctx, *fexp, args);
             }
         }
-        let func_expr = self.convert_expr(ctx.used(), func, None)?;
+        self.reject_unknown_external_call(func)?;
+        // A call through a function pointer is `invoke(f, args…)` in daScript,
+        // and the callee expression is the function value itself: C's
+        // decay-to-pointer and the `(*f)(…)` dereference are both identities on
+        // it, so they are peeled off rather than lowered as pointer operations.
+        let is_direct = self.is_direct_function_declaration(func);
+        let indirect_callee = (!is_direct)
+            .then(|| self.function_value_operand(func))
+            .flatten();
+        // A direct call names the function; the decay to a pointer that Clang
+        // records around it must not become a `@@name` function *value*.
+        let callee_expr_id = match (indirect_callee, is_direct) {
+            (Some(value), _) => value,
+            (None, true) => strip_implicit_casts(&self.ast_context, func),
+            (None, false) => func,
+        };
+        let func_expr = self.convert_expr(ctx.used(), callee_expr_id, None)?;
         let mut is_unsafe = func_expr.is_unsafe;
         // Runtime policy is selected from the C declaration, not from the
         // already-lowered expression: an implicit function-to-pointer cast can
@@ -285,10 +290,16 @@ impl<'c> Translation<'c> {
                 self.pack_variadic_call_tail(0, variadic_tail)?,
             ));
         }
-        let call_target = runtime
-            .map(|function| DaExpr::Var(function.target_name().to_owned()))
-            .unwrap_or(func_expr.val);
-        let call = mk().call_expr(call_target, das_args);
+        let call = if let Some(function) = runtime {
+            mk().call_expr(DaExpr::Var(function.target_name().to_owned()), das_args)
+        } else if indirect_callee.is_some() {
+            // `invoke` is daScript's call-through-a-function-value operator.
+            let mut invoke_args = vec![func_expr.val];
+            invoke_args.extend(das_args);
+            mk().call_expr(DaExpr::Var("invoke".to_owned()), invoke_args)
+        } else {
+            mk().call_expr(func_expr.val, das_args)
+        };
         // The raw-memory runtime returns an address, not C's declared return
         // type. Materialize it once at the outermost pointer type demanded by
         // this expression: `(int *)malloc(...)` crosses as `uint64 -> int?`.
@@ -308,6 +319,12 @@ impl<'c> Translation<'c> {
         let result = if let Some(expected_ty) = override_ty {
             let ret_ty = self.convert_type(expected_ty)?;
             if runtime_pointer_result_ty == Some(expected_ty) {
+                call
+            } else if self.is_callable_type(expected_ty.ctype)
+                || crate::convert_type::is_function_value_type(&ret_ty)
+            {
+                // daScript function values have no conversion syntax and need
+                // none: a C function pointer only ever crosses to itself.
                 call
             } else if matches!(ret_ty.kind, DaTypeKind::Pointer(_)) {
                 self.abi_pointer_cast(call, ret_ty)
@@ -396,6 +413,133 @@ impl<'c> Translation<'c> {
             return None;
         };
         self.ast_context[*decl_id].kind.get_name().cloned()
+    }
+
+    /// True when this declaration comes from the translation unit's own source
+    /// file rather than from an included header.
+    ///
+    /// If the main file cannot be located in the source map the answer is `true`:
+    /// mislabelling every function as external would be a far worse failure than
+    /// exporting a few header helpers.
+    fn is_defined_in_main_file(&self, decl_id: CDeclId) -> bool {
+        let Some(main_file_id) = self.ast_context.find_file_id(&self.main_file) else {
+            return true;
+        };
+        self.ast_context
+            .file_id(&self.ast_context[decl_id])
+            .map_or(true, |file_id| file_id == main_file_id)
+    }
+
+    /// The daScript name of the function a value-position expression names, if
+    /// it names one directly (`add`, `(add)`, `*add`, …).
+    pub(crate) fn direct_function_reference(&self, expr: CExprId) -> Option<String> {
+        let mut current = expr;
+        loop {
+            match &self.ast_context[current].kind {
+                CExprKind::Paren(_, inner) => current = *inner,
+                CExprKind::ImplicitCast(_, inner, CastKind::FunctionToPointerDecay, _, _)
+                | CExprKind::ImplicitCast(_, inner, CastKind::LValueToRValue, _, _) => {
+                    current = *inner
+                }
+                CExprKind::Unary(_, CUnOp::Deref, inner, _) => current = *inner,
+                CExprKind::DeclRef(_, decl_id, _) => {
+                    let CDeclKind::Function { ref name, .. } = self.ast_context[*decl_id].kind
+                    else {
+                        return None;
+                    };
+                    return Some(self.declare_value_name(*decl_id, name));
+                }
+                _ => return None,
+            }
+        }
+    }
+
+    /// Peel the C conversions that only exist because C has no function values.
+    ///
+    /// `f(…)`, `(*f)(…)` and `(**f)(…)` all call the same object; Clang spells
+    /// them as a decay-to-pointer over zero or more dereferences of an lvalue.
+    /// daScript's `function<…>` *is* the value, so every one of those layers is
+    /// an identity.  Returns the expression that actually holds the function
+    /// value, or `None` when this is not a function-pointer callee at all.
+    fn function_value_operand(&self, func: CExprId) -> Option<CExprId> {
+        let mut current = func;
+        let mut peeled = false;
+        loop {
+            match &self.ast_context[current].kind {
+                CExprKind::ImplicitCast(_, inner, CastKind::FunctionToPointerDecay, _, _)
+                | CExprKind::ImplicitCast(_, inner, CastKind::LValueToRValue, _, _) => {
+                    current = *inner;
+                    peeled = true;
+                }
+                CExprKind::Unary(_, CUnOp::Deref, inner, _) => {
+                    current = *inner;
+                    peeled = true;
+                }
+                CExprKind::Paren(_, inner) => {
+                    current = *inner;
+                    peeled = true;
+                }
+                _ => break,
+            }
+        }
+        // The remaining expression must still be a function pointer (or a
+        // function): anything else means we peeled through a real C pointer.
+        let is_callable = self.ast_context[current]
+            .kind
+            .get_qual_type()
+            .map(|ty| self.is_callable_type(ty.ctype))
+            .unwrap_or(false);
+        (peeled && is_callable).then_some(current)
+    }
+
+    /// True for a C function type or a pointer to one.
+    pub(crate) fn is_callable_type(&self, ctype: CTypeId) -> bool {
+        match self.ast_context.resolve_type(ctype).kind {
+            CTypeKind::Function(..) => true,
+            CTypeKind::Pointer(inner) => matches!(
+                self.ast_context.resolve_type(inner.ctype).kind,
+                CTypeKind::Function(..)
+            ),
+            _ => false,
+        }
+    }
+
+    /// Reject a direct call to a C function that this translation unit neither
+    /// defines nor lowers to the compiler-owned runtime.
+    ///
+    /// Emitting the bare call anyway produced daScript that names a function
+    /// which does not exist — a link error at best, and silently different
+    /// behaviour whenever daScript happened to have a name of its own.
+    fn reject_unknown_external_call(&self, func: CExprId) -> TranslationResult<()> {
+        let mut callee = func;
+        while let CExprKind::ImplicitCast(_, inner, _, _, _) = &self.ast_context[callee].kind {
+            callee = *inner;
+        }
+        let CExprKind::DeclRef(_, decl_id, _) = self.ast_context[callee].kind else {
+            return Ok(());
+        };
+        let CDeclKind::Function {
+            ref name, body, ..
+        } = self.ast_context[decl_id].kind
+        else {
+            return Ok(());
+        };
+        if body.is_some() || canonical_runtime_function(name).is_some() {
+            return Ok(());
+        }
+        // A declaration without a body may still be defined elsewhere in this
+        // translation unit; `body` is only set on the defining declaration.
+        if self.ast_context.iter_decls().any(|(_, decl)| {
+            matches!(&decl.kind, CDeclKind::Function { name: other, body: Some(_), .. }
+                if other == name)
+        }) {
+            return Ok(());
+        }
+        Err(format_translation_err!(
+            self.ast_context.display_loc(&self.ast_context[func].loc),
+            "unsupported external call: {}",
+            name,
+        ))
     }
 
     fn is_direct_function_declaration(&self, func: CExprId) -> bool {
@@ -503,6 +647,15 @@ impl<'c> Translation<'c> {
             }
         }
     }
+}
+
+/// Drop the implicit conversions Clang records around an expression.
+fn strip_implicit_casts(ast_context: &TypedAstContext, expr: CExprId) -> CExprId {
+    let mut current = expr;
+    while let CExprKind::ImplicitCast(_, inner, _, _, _) = &ast_context[current].kind {
+        current = *inner;
+    }
+    current
 }
 
 fn canonical_runtime_arg_type(

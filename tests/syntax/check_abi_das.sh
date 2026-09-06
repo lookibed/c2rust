@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-dasroot="${DASROOT:-/root/daScript}"
 syntax_dir="$(cd "$(dirname "$0")" && pwd)"
+daslang="$(bash "$syntax_dir/../../scripts/find_daslang.sh")"
 
 for entry in \
     p17_runtime_malloc:runtime_malloc_returns_typed_pointer \
@@ -31,5 +31,5 @@ for entry in \
 do
     test_name="${entry%%:*}"
     main_name="${entry#*:}"
-    "$dasroot/bin/daslang" "$syntax_dir/$test_name.das" -main "$main_name"
+    "$daslang" "$syntax_dir/$test_name.das" -main "$main_name"
 done

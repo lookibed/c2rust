@@ -1,9 +1,175 @@
 ---
 source: c2dascript-transpile/tests/snapshots.rs
-expression: cat tests/snapshots/loops.das
+expression: transpile --strict tests/snapshots/loops.c
 ---
 options gen2
 
+var c2da_rt_heap : array<uint8>
+
+var c2da_rt_next : uint64 = 0x0
+
+var c2da_rt_alloc_addrs : array<uint64>
+
+var c2da_rt_alloc_sizes : array<uint64>
+
+var c2da_rt_alloc_live : array<bool>
+
+def c2da_rt_init_heap() {
+    if (length(c2da_rt_heap) == 0) {
+        reserve(c2da_rt_heap, int(0x4000000))
+        resize(c2da_rt_heap, 1)
+    }
+}
+def c2da_rt_reset() {
+    c2da_rt_next = 0x0
+    resize(c2da_rt_alloc_addrs, 0)
+    resize(c2da_rt_alloc_sizes, 0)
+    resize(c2da_rt_alloc_live, 0)
+}
+def c2da_rt_malloc(size : uint64) : uint64 {
+    c2da_rt_init_heap()
+    if (size == 0x0) {
+        return 0x0
+    }
+    var start : uint64 = c2da_rt_next
+    var end : uint64 = start + size
+    if (end > 0x4000000) {
+        return 0x0
+    }
+    if (int(end) > length(c2da_rt_heap)) {
+        resize(c2da_rt_heap, int(end))
+    }
+    c2da_rt_next = end
+    var address : uint64 = unsafe(intptr(unsafe(addr(c2da_rt_heap[int(start)]))))
+    var record : uint64 = uint64(length(c2da_rt_alloc_addrs))
+    resize(c2da_rt_alloc_addrs, int(record + 0x1))
+    resize(c2da_rt_alloc_sizes, int(record + 0x1))
+    resize(c2da_rt_alloc_live, int(record + 0x1))
+    c2da_rt_alloc_addrs[int(record)] = address
+    c2da_rt_alloc_sizes[int(record)] = size
+    c2da_rt_alloc_live[int(record)] = true
+    return address
+}
+def c2da_rt_free(address : uint64) {
+    var i : uint64 = 0x0
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            c2da_rt_alloc_live[int(i)] = false
+            return
+        }
+        i = i + 0x1
+    }
+}
+def c2da_rt_realloc(address : uint64; size : uint64) : uint64 {
+    if (address == 0x0) {
+        return c2da_rt_malloc(size)
+    }
+    if (size == 0x0) {
+        c2da_rt_free(address)
+        return 0x0
+    }
+    var i : uint64 = 0x0
+    var old_size : uint64 = 0x0
+    var found : bool = false
+    while (int(i) < length(c2da_rt_alloc_addrs)) {
+        if (c2da_rt_alloc_live[int(i)] && c2da_rt_alloc_addrs[int(i)] == address) {
+            old_size = c2da_rt_alloc_sizes[int(i)]
+            found = true
+        }
+        i = i + 0x1
+    }
+    if (found == false) {
+        return 0x0
+    }
+    var replacement : uint64 = c2da_rt_malloc(size)
+    if (replacement == 0x0) {
+        return 0x0
+    }
+    var copy_size : uint64 = 0x0
+    if (old_size < size) {
+        copy_size = old_size
+    } else {
+        copy_size = size
+    }
+    c2da_rt_memcpy(replacement, address, copy_size)
+    c2da_rt_free(address)
+    return replacement
+}
+def c2da_rt_memset(dst : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = value
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_calloc(count : uint64; size : uint64) : uint64 {
+    var total : uint64 = count * size
+    if (size != 0x0 && total / size != count) {
+        return 0x0
+    }
+    var address : uint64 = c2da_rt_malloc(total)
+    if (address != 0x0) {
+        c2da_rt_memset(address, uint8(0x0), total)
+    }
+    return address
+}
+def c2da_rt_memcpy(dst : uint64; src : uint64; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        i = i + 0x1
+    }
+    return dst
+}
+def c2da_rt_memcmp(left : uint64; right : uint64; count : uint64) : int {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) < uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return -1
+        }
+        if (uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(left)))[int(i)])) > uint(unsafe(unsafe(unsafe(reinterpret<uint8?>(right)))[int(i)]))) {
+            return 1
+        }
+        i = i + 0x1
+    }
+    return 0
+}
+def c2da_rt_memmove(dst : uint64; src : uint64; count : uint64) : uint64 {
+    if (dst < src) {
+        var i : uint64 = 0x0
+        while (i < count) {
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+            i = i + 0x1
+        }
+    } else {
+        var i : uint64 = count
+        while (i > 0x0) {
+            i = i - 0x1
+            unsafe(unsafe(unsafe(reinterpret<uint8?>(dst)))[int(i)]) = unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)])
+        }
+    }
+    return dst
+}
+def c2da_rt_memchr(src : uint64; value : uint8; count : uint64) : uint64 {
+    var i : uint64 = 0x0
+    while (i < count) {
+        if (unsafe(unsafe(unsafe(reinterpret<uint8?>(src)))[int(i)]) == value) {
+            return src + i
+        }
+        i = i + 0x1
+    }
+    return 0x0
+}
+struct C2daVaArg {
+    tag : int
+    i64 : int64
+    f64 : double
+    raw : uint64
+}
+struct C2daVaCursor {
+    index : int
+}
 def c2da_min_int(a : int; b : int) : int {
     if (a < b) {
         return a
@@ -70,7 +236,7 @@ def c2da_clip_uint(v : int) : uint {
     return uint(v)
 }
 def c2da_bool_to_uint(v : bool) : uint {
-    if (v) {
+    if (v == true) {
         return 0x1
     } else {
         return 0x0
@@ -80,427 +246,641 @@ def c2da___assert_fail(expr : void?; file : void?; line : uint; func : void?) {
 }
 [export]
 def while_loop(var x : int) : int {
-    while (uint64(x) != uint64(0)) {
-        x = x + 1
-        x
+    label 0:
+    if (x != 0) {
+        goto label 1
     }
     return x
+    label 1:
+    x = int(x + int(1))
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def for_loop(var x_0 : int) : int {
-    var i : int = 0
-    while (i < 10) {
-        x_0 = x_0 + 1
-        x_0
-        i = i + 1
+    var i : int = int(0)
+    i = int(0)
+    label 0:
+    var c2da_fresh0 : int = int(0)
+    if (i < int(10)) {
+        c2da_fresh0 = int(1)
+    }
+    if (c2da_fresh0 != 0) {
+        goto label 1
     }
     return x_0
+    label 1:
+    x_0 = int(x_0 + int(1))
+    var c2da_postinc : int = i
+    i = int(i + 1)
+    c2da_postinc
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def infinite_loop(var x_1 : int) {
-    while (true) {
-        x_1 = x_1 + 1
-        x_1
-    }
+    label 0:
+    x_1 = int(x_1 + int(1))
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def goto_loop(var x_2 : int) : int {
-    label 27652:
-    x_2 = x_2 + 1
-    x_2
-    if (uint64(x_2) != uint64(0)) {
-        goto label 27652
+    label 0:
+    x_2 = int(x_2 + int(1))
+    if (x_2 != 0) {
+        goto label 1
     }
     return x_2
+    label 1:
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def do_while_loop(var x_3 : int) : int {
-    var _dw_113 : bool = true
-    while (_dw_113 || x_3) {
-        _dw_113 = false
-        x_3 = x_3 + 1
-        x_3
+    label 0:
+    x_3 = int(x_3 + int(1))
+    if (x_3 != 0) {
+        goto label 0
     }
     return x_3
 }
 [export]
 def break_while(var x_4 : int) : int {
-    while (uint64(x_4) != uint64(0)) {
-        if (uint64(x_4) != uint64(0)) {
-            x_4 = x_4 + 1
-            x_4
-            if (uint64(x_4) != uint64(0)) {
-                break
-            }
-        }
-        x_4 = x_4 + 2
-        x_4
+    label 0:
+    if (x_4 != 0) {
+        goto label 2
     }
+    label 1:
     return x_4
+    label 2:
+    if (x_4 != 0) {
+        goto label 4
+    }
+    label 3:
+    x_4 = int(x_4 + int(2))
+    goto label 0
+    label 4:
+    x_4 = int(x_4 + int(1))
+    if (x_4 != 0) {
+        goto label 5
+    }
+    goto label 3
+    label 5:
+    goto label 1
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def continue_while(var x_5 : int) : int {
-    while (uint64(x_5) != uint64(0)) {
-        if (uint64(x_5) != uint64(0)) {
-            x_5 = x_5 + 1
-            x_5
-            if (uint64(x_5) != uint64(0)) {
-                continue
-            }
-        }
-        x_5 = x_5 + 2
-        x_5
+    label 0:
+    if (x_5 != 0) {
+        goto label 1
     }
     return x_5
+    label 1:
+    if (x_5 != 0) {
+        goto label 3
+    }
+    label 2:
+    x_5 = int(x_5 + int(2))
+    goto label 0
+    label 3:
+    x_5 = int(x_5 + int(1))
+    if (x_5 != 0) {
+        goto label 4
+    }
+    goto label 2
+    label 4:
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def trivial_nested_while(var x_6 : int) {
-    while (uint64(x_6) != uint64(0)) {
-        while (uint64(x_6) != uint64(0)) {
-            while (uint64(x_6) != uint64(0)) {
-                x_6 = x_6 + 1
-                x_6
-            }
-        }
+    label 0:
+    if (x_6 != 0) {
+        goto label 1
     }
+    return
+    label 1:
+    label 2:
+    if (x_6 != 0) {
+        goto label 3
+    }
+    goto label 0
+    label 3:
+    label 4:
+    if (x_6 != 0) {
+        goto label 5
+    }
+    goto label 2
+    label 5:
+    x_6 = int(x_6 + int(1))
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def nested_while(var x_7 : int) {
-    while (uint64(x_7) != uint64(0)) {
-        while (uint64(x_7) != uint64(0)) {
-            while (uint64(x_7) != uint64(0)) {
-                x_7 = x_7 + 1
-                x_7
-            }
-            x_7 = x_7 + 2
-            x_7
-        }
-        x_7 = x_7 + 3
-        x_7
+    label 0:
+    if (x_7 != 0) {
+        goto label 1
     }
+    return
+    label 1:
+    label 2:
+    if (x_7 != 0) {
+        goto label 3
+    }
+    x_7 = int(x_7 + int(3))
+    goto label 0
+    label 3:
+    label 4:
+    if (x_7 != 0) {
+        goto label 5
+    }
+    x_7 = int(x_7 + int(2))
+    goto label 2
+    label 5:
+    x_7 = int(x_7 + int(1))
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def nested_for(var x_8 : int) {
-    var i_0 : int = 0
-    while (int(i_0) < 5) {
-        var j : int = 0
-        while (int(j) < 5) {
-            x_8 = x_8 + 1
-            x_8
-            j = j + 1
-        }
-        i_0 = i_0 + 1
+    var i_0 : int = int(0)
+    var j : int = int(0)
+    i_0 = int(0)
+    label 0:
+    var c2da_fresh1 : int = int(0)
+    if (i_0 < int(5)) {
+        c2da_fresh1 = int(1)
     }
+    if (c2da_fresh1 != 0) {
+        goto label 1
+    }
+    return
+    label 1:
+    j = int(0)
+    label 2:
+    var c2da_fresh2 : int = int(0)
+    if (j < int(5)) {
+        c2da_fresh2 = int(1)
+    }
+    if (c2da_fresh2 != 0) {
+        goto label 3
+    }
+    var c2da_postinc_2 : int = i_0
+    i_0 = int(i_0 + 1)
+    c2da_postinc_2
+    goto label 0
+    label 3:
+    var c2da_postinc_0 : int = x_8
+    x_8 = int(x_8 + 1)
+    c2da_postinc_0
+    var c2da_postinc_1 : int = j
+    j = int(j + 1)
+    c2da_postinc_1
+    goto label 2
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def exit_nested_loops(var x_9 : int) : int {
-    while (uint64(x_9) != uint64(0)) {
-        while (uint64(x_9) != uint64(0)) {
-            if (uint64(x_9) != uint64(0)) {
-                goto label 59611
-            }
-            x_9 = x_9 + 1
-            x_9
-        }
+    label 0:
+    if (x_9 != 0) {
+        goto label 2
     }
-    label 59611:
+    label 1:
     return x_9
+    label 2:
+    label 3:
+    if (x_9 != 0) {
+        goto label 4
+    }
+    goto label 0
+    label 4:
+    if (x_9 != 0) {
+        goto label 5
+    }
+    var c2da_postinc_3 : int = x_9
+    x_9 = int(x_9 + 1)
+    c2da_postinc_3
+    goto label 3
+    label 5:
+    goto label 1
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def continue_nested_loops(var x_10 : int) : int {
-    label 15029:
-    while (uint64(x_10) != uint64(0)) {
-        while (uint64(x_10) != uint64(0)) {
-            if (uint64(x_10) != uint64(0)) {
-                goto label 15029
-            }
-            x_10 = x_10 + 1
-            x_10
-        }
-        x_10 = x_10 + 2
-        x_10
+    label 0:
+    label 1:
+    if (x_10 != 0) {
+        goto label 2
     }
     return x_10
+    label 2:
+    label 3:
+    if (x_10 != 0) {
+        goto label 4
+    }
+    x_10 = int(x_10 + int(2))
+    goto label 1
+    label 4:
+    if (x_10 != 0) {
+        goto label 5
+    }
+    var c2da_postinc_4 : int = x_10
+    x_10 = int(x_10 + 1)
+    c2da_postinc_4
+    goto label 3
+    label 5:
+    goto label 0
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def break_and_continue_nested_loops(var x_11 : int) : int {
-    label 15029:
-    while (uint64(x_11) != uint64(0)) {
-        while (uint64(x_11) != uint64(0)) {
-            if (uint64(x_11) != uint64(0)) {
-                goto label 59611
-            }
-            if (uint64(x_11) != uint64(0)) {
-                goto label 15029
-            }
-            x_11 = x_11 + 1
-            x_11
-        }
-        x_11 = x_11 + 2
-        x_11
+    label 0:
+    label 1:
+    if (x_11 != 0) {
+        goto label 3
     }
-    label 59611:
+    label 2:
     return x_11
+    label 3:
+    label 4:
+    if (x_11 != 0) {
+        goto label 5
+    }
+    x_11 = int(x_11 + int(2))
+    goto label 1
+    label 5:
+    if (x_11 != 0) {
+        goto label 7
+    }
+    if (x_11 != 0) {
+        goto label 6
+    }
+    var c2da_postinc_5 : int = x_11
+    x_11 = int(x_11 + 1)
+    c2da_postinc_5
+    goto label 4
+    label 6:
+    goto label 0
+    label 7:
+    goto label 2
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def for_loop_single_continue(var x_12 : int) : int {
-    var i_1 : int = 0
-    while (int(i_1) < 10) {
-        if (uint64(x_12) != uint64(0)) {
-            if (uint64(x_12) != uint64(0)) {
-                continue
-            }
-        }
-        x_12 = x_12 + 1
-        x_12
-        i_1 = i_1 + 1
+    var i_1 : int = int(0)
+    i_1 = int(0)
+    label 0:
+    var c2da_fresh3 : int = int(0)
+    if (i_1 < int(10)) {
+        c2da_fresh3 = int(1)
+    }
+    if (c2da_fresh3 != 0) {
+        goto label 1
     }
     return x_12
+    label 1:
+    if (x_12 != 0) {
+        goto label 4
+    }
+    label 2:
+    x_12 = int(x_12 + int(1))
+    label 3:
+    var c2da_postinc_6 : int = i_1
+    i_1 = int(i_1 + 1)
+    c2da_postinc_6
+    goto label 0
+    label 4:
+    if (x_12 != 0) {
+        goto label 5
+    }
+    goto label 2
+    label 5:
+    goto label 3
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def for_loop_multi_continue(var x_13 : int) : int {
-    var i_2 : int = 0
-    while (int(i_2) < 10) {
-        if (uint64(x_13) != uint64(0)) {
-            if (uint64(x_13) != uint64(0)) {
-                continue
-            }
-        }
-        x_13 = x_13 + 1
-        x_13
-        if (uint64(x_13) != uint64(0)) {
-            if (uint64(x_13) != uint64(0)) {
-                continue
-            }
-        }
-        x_13 = x_13 + 2
-        x_13
-        i_2 = i_2 + 1
+    var i_2 : int = int(0)
+    i_2 = int(0)
+    label 0:
+    var c2da_fresh4 : int = int(0)
+    if (i_2 < int(10)) {
+        c2da_fresh4 = int(1)
+    }
+    if (c2da_fresh4 != 0) {
+        goto label 1
     }
     return x_13
+    label 1:
+    if (x_13 != 0) {
+        goto label 7
+    }
+    label 2:
+    x_13 = int(x_13 + int(1))
+    if (x_13 != 0) {
+        goto label 5
+    }
+    label 3:
+    x_13 = int(x_13 + int(2))
+    label 4:
+    var c2da_postinc_7 : int = i_2
+    i_2 = int(i_2 + 1)
+    c2da_postinc_7
+    goto label 0
+    label 5:
+    if (x_13 != 0) {
+        goto label 6
+    }
+    goto label 3
+    label 6:
+    goto label 4
+    label 7:
+    if (x_13 != 0) {
+        goto label 8
+    }
+    goto label 2
+    label 8:
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def do_loop_single_continue(var x_14 : int) : int {
-    var _dw_400 : bool = true
-    while (_dw_400 || x_14) {
-        _dw_400 = false
-        if (uint64(x_14) != uint64(0)) {
-            if (uint64(x_14) != uint64(0)) {
-                continue
-            }
-        }
-        x_14 = x_14 + 1
-        x_14
+    label 0:
+    if (x_14 != 0) {
+        goto label 3
+    }
+    label 1:
+    x_14 = int(x_14 + int(1))
+    label 2:
+    if (x_14 != 0) {
+        goto label 0
     }
     return x_14
+    label 3:
+    if (x_14 != 0) {
+        goto label 4
+    }
+    goto label 1
+    label 4:
+    goto label 2
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def do_loop_multi_continue(var x_15 : int) : int {
-    var _dw_422 : bool = true
-    while (_dw_422 || x_15) {
-        _dw_422 = false
-        if (uint64(x_15) != uint64(0)) {
-            if (uint64(x_15) != uint64(0)) {
-                continue
-            }
-        }
-        x_15 = x_15 + 1
-        x_15
-        if (uint64(x_15) != uint64(0)) {
-            if (uint64(x_15) != uint64(0)) {
-                continue
-            }
-        }
-        x_15 = x_15 + 2
-        x_15
+    label 0:
+    if (x_15 != 0) {
+        goto label 6
+    }
+    label 1:
+    x_15 = int(x_15 + int(1))
+    if (x_15 != 0) {
+        goto label 4
+    }
+    label 2:
+    x_15 = int(x_15 + int(2))
+    label 3:
+    if (x_15 != 0) {
+        goto label 0
     }
     return x_15
+    label 4:
+    if (x_15 != 0) {
+        goto label 5
+    }
+    goto label 2
+    label 5:
+    goto label 3
+    label 6:
+    if (x_15 != 0) {
+        goto label 7
+    }
+    goto label 1
+    label 7:
+    goto label 3
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def explicit_loop_multi_exit(var x_16 : int) : int {
-    while (true) {
-        if (x_16 == 1) {
-            x_16 = x_16 + 1
-            x_16
-        } elif (x_16 == 2) {
-            x_16 = x_16 + 2
-            x_16
-        } else {
-            x_16 = x_16 + 6
-            x_16
-        }
+    label 0:
+    if (x_16 == int(1)) {
+        goto label 2
+    } elif (x_16 == int(2)) {
+        goto label 3
     }
-    label 10414:
-    x_16 = x_16 + 4
-    x_16
+    x_16 = int(x_16 + int(6))
+    label 1:
+    x_16 = int(x_16 + int(4))
     return x_16
+    label 2:
+    x_16 = int(x_16 + int(1))
+    goto label 0
+    label 3:
+    x_16 = int(x_16 + int(2))
+    if (x_16 != 0) {
+        goto label 5
+    }
+    x_16 = int(x_16 + int(4))
+    label 4:
+    x_16 = int(x_16 + int(5))
+    goto label 1
+    label 5:
+    x_16 = int(x_16 + int(3))
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def implicit_loop_multi_exit(var x_17 : int) : int {
-    label 96446:
-    if (x_17 == 1) {
-        x_17 = x_17 + 1
-        x_17
-    } elif (x_17 == 2) {
-        x_17 = x_17 + 2
-        x_17
-    } else {
-        x_17 = x_17 + 6
-        x_17
+    label 0:
+    if (x_17 == int(1)) {
+        goto label 2
+    } elif (x_17 == int(2)) {
+        goto label 3
     }
-    x_17 = x_17 + 4
-    x_17
+    x_17 = int(x_17 + int(6))
+    label 1:
+    x_17 = int(x_17 + int(4))
     return x_17
+    label 2:
+    x_17 = int(x_17 + int(1))
+    goto label 0
+    label 3:
+    x_17 = int(x_17 + int(2))
+    if (x_17 != 0) {
+        goto label 5
+    }
+    x_17 = int(x_17 + int(4))
+    label 4:
+    x_17 = int(x_17 + int(5))
+    goto label 1
+    label 5:
+    x_17 = int(x_17 + int(3))
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def loop_returns(var x_18 : int) : int {
-    while (uint64(x_18) != uint64(0)) {
-        x_18 = x_18 + 1
-        x_18
-        if (uint64(x_18) != uint64(0)) {
-            x_18 = x_18 + 2
-            x_18
-            return x_18
-        }
-        x_18 = x_18 + 3
-        x_18
-        if (uint64(x_18) != uint64(0)) {
-            x_18 = x_18 + 4
-            x_18
-            return x_18
-        }
+    label 0:
+    if (x_18 != 0) {
+        goto label 1
     }
+    return x_18
+    label 1:
+    x_18 = int(x_18 + int(1))
+    if (x_18 != 0) {
+        goto label 3
+    }
+    x_18 = int(x_18 + int(3))
+    if (x_18 != 0) {
+        goto label 2
+    }
+    goto label 0
+    label 2:
+    x_18 = int(x_18 + int(4))
+    return x_18
+    label 3:
+    x_18 = int(x_18 + int(2))
     return x_18
 }
 [export]
 def loop_gotos(var x_19 : int) : int {
-    while (uint64(x_19) != uint64(0)) {
-        x_19 = x_19 + 1
-        x_19
-        if (uint64(x_19) != uint64(0)) {
-            x_19 = x_19 + 2
-            x_19
-            goto label 27582
-        }
-        x_19 = x_19 + 3
-        x_19
-        if (uint64(x_19) != uint64(0)) {
-            x_19 = x_19 + 4
-            x_19
-            goto label 27582
-        }
-        x_19 = x_19 + 5
-        x_19
+    label 0:
+    if (x_19 != 0) {
+        goto label 1
     }
     return x_19
-    label 27582:
+    label 1:
+    x_19 = int(x_19 + int(1))
+    if (x_19 != 0) {
+        goto label 4
+    }
+    x_19 = int(x_19 + int(3))
+    if (x_19 != 0) {
+        goto label 2
+    }
+    x_19 = int(x_19 + int(5))
+    goto label 0
+    label 2:
+    x_19 = int(x_19 + int(4))
+    label 3:
     return -x_19
+    label 4:
+    x_19 = int(x_19 + int(2))
+    goto label 3
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def loop_early_return(var x_20 : int) : int {
-    while (uint64(x_20) != uint64(0)) {
-        x_20 = x_20 + 1
-        x_20
-        if (uint64(x_20) != uint64(0)) {
-            x_20 = x_20 + 2
-            x_20
-            return x_20
-        }
+    label 0:
+    if (x_20 != 0) {
+        goto label 1
     }
     return -x_20
+    label 1:
+    x_20 = int(x_20 + int(1))
+    if (x_20 != 0) {
+        goto label 2
+    }
+    goto label 0
+    label 2:
+    x_20 = int(x_20 + int(2))
+    return x_20
 }
 [export]
 def if_else_loops(var x_21 : int) {
-    if (uint64(x_21) != uint64(0)) {
-        while (uint64(x_21) != uint64(0)) {
-            x_21 = x_21 + 1
-            x_21
-        }
-    } else {
-        while (uint64(x_21) != uint64(0)) {
-            x_21 = x_21 + 2
-            x_21
-        }
+    if (x_21 != 0) {
+        goto label 3
     }
+    label 0:
+    if (x_21 != 0) {
+        goto label 2
+    }
+    label 1:
+    return
+    label 2:
+    x_21 = int(x_21 + int(2))
+    goto label 0
+    label 3:
+    label 4:
+    if (x_21 != 0) {
+        goto label 5
+    }
+    goto label 1
+    label 5:
+    x_21 = int(x_21 + int(1))
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def goto_loops(var x_22 : int) : int {
-    label 65:
-    if (uint64(x_22) != uint64(0)) {
-        goto label 66
-    } else {
-        goto label 67
+    if (x_22 != 0) {
+        goto label 3
     }
-    label 66:
-    x_22 = x_22 + 1
-    x_22
-    if (uint64(x_22) != uint64(0)) {
-        goto label 66
-    } else {
-        goto label 68
+    label 0:
+    x_22 = int(x_22 + int(2))
+    if (x_22 != 0) {
+        goto label 2
     }
-    label 67:
-    x_22 = x_22 + 2
-    x_22
-    if (uint64(x_22) != uint64(0)) {
-        goto label 67
-    } else {
-        goto label 68
-    }
-    label 68:
+    label 1:
     return x_22
+    label 2:
+    goto label 0
+    label 3:
+    label 4:
+    x_22 = int(x_22 + int(1))
+    if (x_22 != 0) {
+        goto label 5
+    }
+    goto label 1
+    label 5:
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def goto_into_loops(var x_23 : int) {
-    label 65:
-    if (uint64(x_23) != uint64(0)) {
-        goto label 66
-    } else {
-        goto label 67
+    if (x_23 != 0) {
+        goto label 3
     }
-    while (uint64(x_23) != uint64(0)) {
-        label 66:
-        x_23 = x_23 + 1
-        x_23
+    label 0:
+    x_23 = int(x_23 + int(2))
+    if (x_23 != 0) {
+        goto label 2
     }
-    goto label 68
-    while (uint64(x_23) != uint64(0)) {
-        label 67:
-        x_23 = x_23 + 2
-        x_23
-    }
-    goto label 68
-    label 68:
+    label 1:
     return
+    label 2:
+    goto label 0
+    label 3:
+    label 4:
+    x_23 = int(x_23 + int(1))
+    if (x_23 != 0) {
+        goto label 5
+    }
+    goto label 1
+    label 5:
+    goto label 4
+    panic("unreachable: fell out of a translated control-flow graph")
 }
 [export]
 def goto_separate_loops(var x_24 : int) {
-    label 65:
-    if (uint64(x_24) != uint64(0)) {
-        goto label 66
-    } else {
-        goto label 67
+    if (x_24 != 0) {
+        goto label 2
     }
-    label 66:
-    var _dw_782 : bool = true
-    while (_dw_782 || x_24) {
-        _dw_782 = false
-        x_24 = x_24 + 1
-        x_24
+    label 0:
+    x_24 = int(x_24 + int(2))
+    if (x_24 != 0) {
+        goto label 0
     }
-    goto label 68
-    label 67:
-    var _dw_774 : bool = true
-    while (_dw_774 || x_24) {
-        _dw_774 = false
-        x_24 = x_24 + 2
-        x_24
-    }
-    goto label 68
-    label 68:
+    label 1:
     return
-}
-
-[export] def main() : int {
-    return 0
+    label 2:
+    label 3:
+    x_24 = int(x_24 + int(1))
+    if (x_24 != 0) {
+        goto label 3
+    }
+    goto label 1
+    panic("unreachable: fell out of a translated control-flow graph")
 }

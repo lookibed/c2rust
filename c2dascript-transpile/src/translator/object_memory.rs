@@ -326,24 +326,57 @@ impl<'c> Translation<'c> {
             return Err(TranslationError::generic("unsupported C bitfield width"));
         }
         let storage = self.raw_load(address.clone())?;
+        // The read-modify-write is performed in the field's own storage type.
+        // Every constant is built in that type too: daScript has no implicit
+        // numeric conversion, so a 64-bit mask against a 32-bit storage word
+        // is a type error rather than a wider computation.
+        let storage_type = writable_type(self.convert_type(address.ctype)?);
+        let storage_bits = self.raw_storage_size(&address)? * 8;
+        let storage_mask = if storage_bits >= 64 {
+            u64::MAX
+        } else {
+            (1u64 << storage_bits) - 1
+        };
         let field_mask = (1u64 << width) - 1;
         let shifted_mask = field_mask << bit_offset;
+        let in_storage_type = |expr: DaExpr| {
+            if Self::infer_type(&expr).as_ref() == Some(&storage_type) {
+                return expr;
+            }
+            DaExpr::Cast {
+                kind: das_ast::CastKind::Cast,
+                expr: Box::new(expr),
+                to: storage_type.clone(),
+            }
+        };
+        // Masks are bit patterns, the shift distance is a count; each keeps
+        // its natural literal spelling and is always given the storage type
+        // explicitly, because a bare literal's type comes from its spelling
+        // rather than from the word it is applied to.
+        let typed_const = |literal: DaExpr| DaExpr::Cast {
+            kind: das_ast::CastKind::Cast,
+            expr: Box::new(literal),
+            to: storage_type.clone(),
+        };
+        let storage_mask_const =
+            |bits: u64| typed_const(DaExpr::ConstUInt(bits & storage_mask));
+        let storage_count_const = |count: u64| typed_const(DaExpr::ConstInt(count as i64));
         let value_expr = value.val.clone();
         let new_storage = storage.zip(value).map(|(old, value)| DaExpr::Op2 {
             op: "|",
             left: Box::new(DaExpr::Op2 {
                 op: "&",
                 left: Box::new(old),
-                right: Box::new(DaExpr::ConstUInt(!shifted_mask)),
+                right: Box::new(storage_mask_const(!shifted_mask)),
             }),
             right: Box::new(DaExpr::Op2 {
                 op: "<<",
                 left: Box::new(DaExpr::Op2 {
                     op: "&",
-                    left: Box::new(value),
-                    right: Box::new(DaExpr::ConstUInt(field_mask)),
+                    left: Box::new(in_storage_type(value)),
+                    right: Box::new(storage_mask_const(field_mask)),
                 }),
-                right: Box::new(DaExpr::ConstInt(bit_offset as i64)),
+                right: Box::new(storage_count_const(bit_offset as u64)),
             }),
         });
         self.raw_store(address, new_storage)
